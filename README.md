@@ -41,6 +41,8 @@ Please see the included readme for detailed instructions.
 * *NamelessHoodie* - FXR serialization
 * *Avocado* - YabberAvocado additions
 * *ivi* - WitchyBND maintainer
+* *Rainer* - professional dumbass
+* *Ottobonn* - Rainer's much smarter brother
 
 # Changelog
 ## WitchyBND

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net7.0-windows</TargetFramework>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <Copyright>Copyright © Joseph Anderson 2019</Copyright>
     <Description>A .NET library for reading and writing FromSoftware file formats.</Description>
     <Company>JKAnderson</Company>
