@@ -5,7 +5,9 @@
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <RootNamespace>WitchyBND</RootNamespace>
     <IsPackable>false</IsPackable>
-    <Title>WitchyBND</Title>    
+    <Title>WitchyBND</Title>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <OutputPath>bin\x64\Debug\</OutputPath>
@@ -23,7 +25,8 @@
     <OutputPath>..\bin\Debug\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DebugType>embedded</DebugType>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
     <OutputPath>..\bin\Release\</OutputPath>
   </PropertyGroup>
   <PropertyGroup>
@@ -43,17 +46,5 @@
   <ItemGroup>
     <ProjectReference Include="..\SoulsFormats\SoulsFormats.csproj" />
     <ProjectReference Include="..\WitchyFormats\WitchyFormats.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Remove="Assets\Paramdex\**" />
-    <Content Include="..\dist\readme.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>readme.txt</Link>
-    </Content>
-    <Content Include="Assets\Paramdex\**">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <None Remove="SoulsFormats.dll" />
-    <None Remove="Yabber.dll" />
   </ItemGroup>
 </Project>

@@ -44,7 +44,7 @@ namespace WitchyBND
                     "If you need to decompress or recompress an unsupported format,\n" +
                     "use WitchyBND.DCX instead.\n\n" +
                     "Press any key to exit."
-                );
+                    );
                 Console.ReadKey();
                 return;
             }
@@ -75,15 +75,15 @@ namespace WitchyBND
                     paths.Add(arg);
                 }
             }
-            
+
             bool pause = false;
-            
+
             foreach (string halfPath in paths)
             {
                 try
                 {
                     string path = Path.GetFullPath(halfPath);
-                 
+
                     // int maxProgress = Console.WindowWidth - 1;
                     // int lastProgress = 0;
                     //
@@ -111,14 +111,14 @@ namespace WitchyBND
 
                     if (Directory.Exists(path))
                     {
-                        error |= RepackDir(path, progress);
-
+                        RepackDir(path, progress);
                     }
 
                     else if (File.Exists(path))
                     {
                         error |= UnpackFile(path, progress);
                     }
+
                     else
                     {
                         Console.Error.WriteLine($"ERROR: File or directory not found: {path}");
@@ -154,7 +154,7 @@ namespace WitchyBND
                     errorcode = 4;
                     error = true;
                 }
-                #if (!DEBUG)
+#if (!DEBUG)
                 catch (Exception ex)
                 {
                     Console.WriteLine();
@@ -162,7 +162,7 @@ namespace WitchyBND
                     errorcode = 1;
                     error = true;
                 }
-                #endif
+#endif
 
                 Console.WriteLine();
             }
@@ -173,6 +173,8 @@ namespace WitchyBND
                 Console.ReadKey();
                 Environment.Exit(errorcode);
             }
+            Console.WriteLine("Done!");
+            System.Threading.Thread.Sleep(1000);
         }
 
         private static bool UnpackFile(string sourceFile, IProgress<float> progress)
@@ -182,10 +184,11 @@ namespace WitchyBND
             string targetDir = $"{sourceDir}\\{fileName.Replace('.', '-')}";
             if (Directory.Exists(targetDir))
                 targetDir += "-ybr";
-            
+
             DCX.Type compression = DCX.Type.Unknown;
 
-            if (fileName.Contains("regulation.bnd.dcx") || fileName.Contains("Data0") || fileName.Contains("regulation.bin") || fileName.Contains("regulation.bnd"))
+            if (fileName.Contains("regulation.bnd.dcx") || fileName.Contains("Data0") || fileName.Contains("regulation.bin") ||
+                fileName.Contains("regulation.bnd"))
                 return UnpackRegulationFile(fileName, sourceDir, targetDir, progress);
 
             if (DCX.Is(sourceFile))
@@ -257,7 +260,7 @@ namespace WitchyBND
                     Console.WriteLine($"File format not recognized: {fileName}");
                     return true;
                 }
-                
+
             }
             else
             {
@@ -445,7 +448,7 @@ namespace WitchyBND
                     Console.WriteLine($"Converting XML to MQB: {fileName}...");
                     YMQB.Repack(sourceFile);
                 }
-                
+
                 else if (sourceFile.EndsWith(".zip"))
                 {
 
@@ -514,7 +517,7 @@ BBBBBBBBBBBBBBBBBBBBBGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
                 }
 
 
-                    else
+                else
                 {
                     Console.WriteLine($"File format not recognized: {fileName}");
                     return true;
@@ -523,11 +526,11 @@ BBBBBBBBBBBBBBBBBBBBBGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 
             }
 
-            return false; 
-            
-           
-            
+            return false;
+
+
         }
+
         private static byte[] TryDecompressBytes(string sourceFile, out DCX.Type compression)
         {
             try
@@ -566,12 +569,12 @@ BBBBBBBBBBBBBBBBBBBBBGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
             if (fileName.Contains("Data0"))
             {
                 string destPath = Path.Combine(sourceDir, "Data0.bdt");
-                    BND4 bnd = SFUtil.DecryptDS3Regulation(destPath);
-                    Console.WriteLine($"Unpacking DS3 Regulation Bin: {fileName}...");
-                    using (var bndReader = new BND4Reader(bnd.Write()))
-                    {
-                        bndReader.Unpack(fileName, targetDir, progress);
-                    }
+                BND4 bnd = SFUtil.DecryptDS3Regulation(destPath);
+                Console.WriteLine($"Unpacking DS3 Regulation Bin: {fileName}...");
+                using (var bndReader = new BND4Reader(bnd.Write()))
+                {
+                    bndReader.Unpack(fileName, targetDir, progress);
+                }
 
                 return false;
             }
@@ -613,50 +616,6 @@ BBBBBBBBBBBBBBBBBBBBBGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
             return (response == ConsoleKey.Y);
         }
 
-        private static bool RepackDir(string sourceDir, IProgress<float> progress)
-        
-        {
-            string sourceName = new DirectoryInfo(sourceDir).Name;
-            string targetDir = new DirectoryInfo(sourceDir).Parent.FullName;
-
-
-            if (File.Exists($"{sourceDir}\\_witchy-bnd3.xml") || File.Exists($"{sourceDir}\\_yabber-bnd3.xml"))
-            {
-                Console.WriteLine($"Repacking BND3: {sourceName}...");
-                WBND3.Repack(sourceDir, targetDir);
-            }
-            else if (File.Exists($"{sourceDir}\\_witchy-bnd4.xml") || File.Exists($"{sourceDir}\\_yabber-bnd4.xml"))
-            {
-                Console.WriteLine($"Repacking BND4: {sourceName}...");
-                WBND4.Repack(sourceDir, targetDir);
-            }
-            else if (File.Exists($"{sourceDir}\\_witchy-bxf3.xml") || File.Exists($"{sourceDir}\\_yabber-bxf3.xml"))
-            {
-                Console.WriteLine($"Repacking BXF3: {sourceName}...");
-                WBXF3.Repack(sourceDir, targetDir);
-            }
-            else if (File.Exists($"{sourceDir}\\_witchy-bxf4.xml") || File.Exists($"{sourceDir}\\_yabber-bxf4.xml"))
-            {
-                Console.WriteLine($"Repacking BXF4: {sourceName}...");
-                WBXF4.Repack(sourceDir, targetDir);
-            }
-            else if (File.Exists($"{sourceDir}\\_witchy-tpf.xml") || File.Exists($"{sourceDir}\\_yabber-tpf.xml"))
-            {
-                Console.WriteLine($"Repacking TPF: {sourceName}...");
-                return WTPF.Repack(sourceDir, targetDir);
-            }
-            else
-            {
-                Console.WriteLine($"WitchyBND or Yabber XML not found in: {sourceName}");
-                return true;
-            }
-
-            if (sourceName.Contains("regulation-bnd-dcx") || sourceName.Contains("Data0") || sourceName.Contains("regulation-bin"))
-                return ReEncryptRegulationFile( sourceName, sourceDir, targetDir, progress);
-
-            return false;
-        }
-
         private static bool ReEncryptRegulationFile(string sourceName, string sourceDir, string targetDir, IProgress<float> progress)
         {
             XmlDocument xml = new XmlDocument();
@@ -696,10 +655,12 @@ BBBBBBBBBBBBBBBBBBBBBGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
                 return false;
             }
 
-            throw new InvalidOperationException("This state is unreachable. If your regulation bin is named correctly, please contact Nordgaren about this regulation.bin. Otherwise" +
+            throw new InvalidOperationException(
+                "This state is unreachable. If your regulation bin is named correctly, please contact Nordgaren about this regulation.bin. Otherwise" +
                 "make sure your bnd contains the original bnd name.");
         }
-       /* private static bool ManageDir(string sourceDir, IProgress<float> progress)
+
+        private static bool RepackDir(string sourceDir, IProgress<float> progress)
         {
             string sourceDirName = new DirectoryInfo(sourceDir).Name;
             string targetDir = new DirectoryInfo(sourceDir).Parent.FullName;
@@ -708,48 +669,51 @@ BBBBBBBBBBBBBBBBBBBBBGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
             {
                 Console.WriteLine($"Repacking BND3: {sourceDirName}...");
                 WBND3.Repack(sourceDir, targetDir);
+                return true;
             }
-            else if (File.Exists($"{sourceDir}\\_witchy-bnd4.xml"))
+            if (File.Exists($"{sourceDir}\\_witchy-bnd4.xml"))
             {
                 Console.WriteLine($"Repacking BND4: {sourceDirName}...");
                 WBND4.Repack(sourceDir, targetDir);
+                return true;
             }
-            else if (File.Exists($"{sourceDir}\\_witchy-bxf3.xml"))
+            if (File.Exists($"{sourceDir}\\_witchy-bxf3.xml"))
             {
                 Console.WriteLine($"Repacking BXF3: {sourceDirName}...");
                 WBXF3.Repack(sourceDir, targetDir);
+                return true;
             }
-            else if (File.Exists($"{sourceDir}\\_witchy-bxf4.xml"))
+            if (File.Exists($"{sourceDir}\\_witchy-bxf4.xml"))
             {
                 Console.WriteLine($"Repacking BXF4: {sourceDirName}...");
                 WBXF4.Repack(sourceDir, targetDir);
+                return true;
             }
-            else if (File.Exists($"{sourceDir}\\_witchy-tpf.xml"))
+            if (File.Exists($"{sourceDir}\\_witchy-tpf.xml"))
             {
                 Console.WriteLine($"Repacking TPF: {sourceDirName}...");
-                System.Threading.Thread.Sleep(5000);
                 WTPF.Repack(sourceDir, targetDir);
+                return true;
             }
-            else
+
+            bool Repacked = false;    
+        
+            foreach (string dir in Directory.EnumerateDirectories(sourceDir))
+            {
+                Repacked = RepackDir(dir, progress) || Repacked;
+            }
+            
+            if (!Repacked)
             {
                 foreach (string sourceFile in Directory.EnumerateFiles(sourceDir))
                 {
                     UnpackFile(sourceFile, progress);
                 }
-
-                foreach (string dir in Directory.EnumerateDirectories(sourceDir))
-                {
-                    string dirName = new DirectoryInfo(dir).Name;
-
-                    if (!dirName.EndsWith("bak"))
-                    {
-                        ManageDir(dir, progress);
-                    }
-                }
             }
 
-            return false;
+            return Repacked;
+            
         }
-        */
+
     }
 }

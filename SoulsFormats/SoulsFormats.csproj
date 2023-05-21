@@ -27,4 +27,8 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="obj\x64" />
+  </ItemGroup>
 </Project>
