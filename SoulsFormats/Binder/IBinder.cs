@@ -1,25 +1,24 @@
 ﻿using System.Collections.Generic;
 
-namespace SoulsFormats
+namespace SoulsFormats;
+
+/// <summary>
+///     A BND or BXF container of generic files.
+/// </summary>
+public interface IBinder
 {
     /// <summary>
-    /// A BND or BXF container of generic files.
+    ///     Flags indicating features of the binder.
     /// </summary>
-    public interface IBinder
-    {
-        /// <summary>
-        /// Flags indicating features of the binder.
-        /// </summary>
-        Binder.Format Format { get; set; }
+    Binder.Format Format { get; set; }
 
-        /// <summary>
-        /// A timestamp or version number, 8 characters maximum.
-        /// </summary>
-        string Version { get; set; }
+    /// <summary>
+    ///     A timestamp or version number, 8 characters maximum.
+    /// </summary>
+    string Version { get; set; }
 
-        /// <summary>
-        /// Files in this binder.
-        /// </summary>
-        List<BinderFile> Files { get; set; }
-    }
+    /// <summary>
+    ///     Files in this binder.
+    /// </summary>
+    List<BinderFile> Files { get; set; }
 }

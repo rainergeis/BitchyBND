@@ -7,33 +7,66 @@ using SoulsFormats;
 namespace WitchyFormats;
 
 /// <summary>
-/// A multi-file texture container used throughout the series. Extension: .tpf
-/// Source: DSMapStudio
+///     A multi-file texture container used throughout the series. Extension: .tpf
+///     Source: DSMapStudio
 /// </summary>
-public partial class TPF : SoulsFile<TPF>, IEnumerable<TPF.Texture>
+public class TPF : SoulsFile<TPF>, IEnumerable<TPF.Texture>
 {
-    /// <summary>
-    /// The textures contained within this TPF.
-    /// </summary>
-    public List<Texture> Textures { get; set; }
 
     /// <summary>
-    /// The platform this TPF will be used on.
+    ///     Type of texture in a TPF.
     /// </summary>
-    public TPFPlatform Platform { get; set; }
+    public enum TexType : byte
+    {
+        /// <summary>
+        ///     One 2D texture.
+        /// </summary>
+        Texture = 0,
+
+        /// <summary>
+        ///     Six 2D textures.
+        /// </summary>
+        Cubemap = 1,
+
+        /// <summary>
+        ///     One 3D texture.
+        /// </summary>
+        Volume = 2
+    }
 
     /// <summary>
-    /// Indicates encoding used for texture names.
+    ///     The platform of the game a TPF is for.
     /// </summary>
-    public byte Encoding { get; set; }
+    public enum TPFPlatform : byte
+    {
+        /// <summary>
+        ///     Headered DDS with minimal metadata.
+        /// </summary>
+        PC = 0,
+
+        /// <summary>
+        ///     Headerless DDS with pre-DX10 metadata.
+        /// </summary>
+        Xbox360 = 1,
+
+        /// <summary>
+        ///     Headerless DDS with pre-DX10 metadata.
+        /// </summary>
+        PS3 = 2,
+
+        /// <summary>
+        ///     Headerless DDS with DX10 metadata.
+        /// </summary>
+        PS4 = 4,
+
+        /// <summary>
+        ///     Headerless DDS with DX10 metadata.
+        /// </summary>
+        Xbone = 5
+    }
 
     /// <summary>
-    /// Unknown.
-    /// </summary>
-    public byte Flag2 { get; set; }
-
-    /// <summary>
-    /// Creates an empty TPF configured for DS3.
+    ///     Creates an empty TPF configured for DS3.
     /// </summary>
     public TPF()
     {
@@ -44,19 +77,52 @@ public partial class TPF : SoulsFile<TPF>, IEnumerable<TPF.Texture>
     }
 
     /// <summary>
-    /// Returns true if the data appears to be a TPF.
+    ///     The textures contained within this TPF.
+    /// </summary>
+    public List<Texture> Textures { get; set; }
+
+    /// <summary>
+    ///     The platform this TPF will be used on.
+    /// </summary>
+    public TPFPlatform Platform { get; set; }
+
+    /// <summary>
+    ///     Indicates encoding used for texture names.
+    /// </summary>
+    public byte Encoding { get; set; }
+
+    /// <summary>
+    ///     Unknown.
+    /// </summary>
+    public byte Flag2 { get; set; }
+
+    /// <summary>
+    ///     Returns an enumerator that iterates through the list of Textures.
+    /// </summary>
+    public IEnumerator<Texture> GetEnumerator()
+    {
+        return Textures.GetEnumerator();
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return GetEnumerator();
+    }
+
+    /// <summary>
+    ///     Returns true if the data appears to be a TPF.
     /// </summary>
     protected override bool Is(BinaryReaderEx br)
     {
         if (br.Length < 4)
             return false;
 
-        string magic = br.GetASCII(0, 4);
+        var magic = br.GetASCII(0, 4);
         return magic == "TPF\0";
     }
 
     /// <summary>
-    /// Reads TPF data from a BinaryReaderEx.
+    ///     Reads TPF data from a BinaryReaderEx.
     /// </summary>
     protected override void Read(BinaryReaderEx br)
     {
@@ -66,19 +132,19 @@ public partial class TPF : SoulsFile<TPF>, IEnumerable<TPF.Texture>
         br.BigEndian = Platform == TPFPlatform.Xbox360 || Platform == TPFPlatform.PS3;
 
         br.ReadInt32(); // Data length
-        int fileCount = br.ReadInt32();
+        var fileCount = br.ReadInt32();
         br.Skip(1); // Platform
         Flag2 = br.AssertByte(0, 1, 2, 3);
         Encoding = br.AssertByte(0, 1, 2);
         br.AssertByte(0);
 
         Textures = new List<Texture>(fileCount);
-        for (int i = 0; i < fileCount; i++)
+        for (var i = 0; i < fileCount; i++)
             Textures.Add(new Texture(br, Platform, Flag2, Encoding));
     }
 
     /// <summary>
-    /// Writes TPF data to a BinaryWriterEx.
+    ///     Writes TPF data to a BinaryWriterEx.
     /// </summary>
     protected override void Write(BinaryWriterEx bw)
     {
@@ -91,14 +157,14 @@ public partial class TPF : SoulsFile<TPF>, IEnumerable<TPF.Texture>
         bw.WriteByte(Encoding);
         bw.WriteByte(0);
 
-        for (int i = 0; i < Textures.Count; i++)
+        for (var i = 0; i < Textures.Count; i++)
             Textures[i].WriteHeader(bw, i, Platform, Flag2);
 
-        for (int i = 0; i < Textures.Count; i++)
+        for (var i = 0; i < Textures.Count; i++)
             Textures[i].WriteName(bw, i, Encoding);
 
-        long dataStart = bw.Position;
-        for (int i = 0; i < Textures.Count; i++)
+        var dataStart = bw.Position;
+        for (var i = 0; i < Textures.Count; i++)
         {
             // Padding for texture data varies wildly across games,
             // so don't worry about this too much
@@ -107,62 +173,18 @@ public partial class TPF : SoulsFile<TPF>, IEnumerable<TPF.Texture>
 
             Textures[i].WriteData(bw, i);
         }
+
         bw.FillInt32("DataSize", (int)(bw.Position - dataStart));
     }
 
     /// <summary>
-    /// Returns an enumerator that iterates through the list of Textures.
-    /// </summary>
-    public IEnumerator<Texture> GetEnumerator() => Textures.GetEnumerator();
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-    /// <summary>
-    /// A DDS texture in a TPF container.
+    ///     A DDS texture in a TPF container.
     /// </summary>
     public class Texture
     {
-        /// <summary>
-        /// The name of the texture; should not include a path or extension.
-        /// </summary>
-        public string Name { get; set; }
 
         /// <summary>
-        /// Indicates format of the texture.
-        /// </summary>
-        public byte Format { get; set; }
-
-        /// <summary>
-        /// Whether this texture is a cubemap.
-        /// </summary>
-        public TexType Type { get; set; }
-
-        /// <summary>
-        /// Number of mipmap levels in this texture.
-        /// </summary>
-        public byte Mipmaps { get; set; }
-
-        /// <summary>
-        /// Unknown.
-        /// </summary>
-        public byte Flags1 { get; set; }
-
-        /// <summary>
-        /// The raw data of the texture.
-        /// </summary>
-        public byte[] Bytes { get; set; }
-
-        /// <summary>
-        /// Extended metadata present in headerless console TPF textures.
-        /// </summary>
-        public TexHeader Header { get; set; }
-
-        /// <summary>
-        /// Unknown optional data; null if not present.
-        /// </summary>
-        public FloatStruct FloatStruct { get; set; }
-
-        /// <summary>
-        /// Creates an empty Texture.
+        ///     Creates an empty Texture.
         /// </summary>
         public Texture()
         {
@@ -171,7 +193,7 @@ public partial class TPF : SoulsFile<TPF>, IEnumerable<TPF.Texture>
         }
 
         /// <summary>
-        /// Create a new PC Texture with the specified information; Cubemap and Mipmaps are determined based on bytes.
+        ///     Create a new PC Texture with the specified information; Cubemap and Mipmaps are determined based on bytes.
         /// </summary>
         public Texture(string name, byte format, byte flags1, byte[] bytes)
         {
@@ -192,8 +214,8 @@ public partial class TPF : SoulsFile<TPF>, IEnumerable<TPF.Texture>
 
         internal Texture(BinaryReaderEx br, TPFPlatform platform, byte flag2, byte encoding)
         {
-            uint fileOffset = br.ReadUInt32();
-            int fileSize = br.ReadInt32();
+            var fileOffset = br.ReadUInt32();
+            var fileSize = br.ReadInt32();
 
             Format = br.ReadByte();
             Type = br.ReadEnum8<TexType>();
@@ -223,8 +245,8 @@ public partial class TPF : SoulsFile<TPF>, IEnumerable<TPF.Texture>
                 }
             }
 
-            uint nameOffset = br.ReadUInt32();
-            bool hasFloatStruct = br.AssertInt32(0, 1) == 1;
+            var nameOffset = br.ReadUInt32();
+            var hasFloatStruct = br.AssertInt32(0, 1) == 1;
 
             if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone)
                 Header.DXGIFormat = br.ReadInt32();
@@ -246,11 +268,51 @@ public partial class TPF : SoulsFile<TPF>, IEnumerable<TPF.Texture>
                 Name = br.GetShiftJIS(nameOffset);
         }
 
+        /// <summary>
+        ///     The name of the texture; should not include a path or extension.
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        ///     Indicates format of the texture.
+        /// </summary>
+        public byte Format { get; set; }
+
+        /// <summary>
+        ///     Whether this texture is a cubemap.
+        /// </summary>
+        public TexType Type { get; set; }
+
+        /// <summary>
+        ///     Number of mipmap levels in this texture.
+        /// </summary>
+        public byte Mipmaps { get; set; }
+
+        /// <summary>
+        ///     Unknown.
+        /// </summary>
+        public byte Flags1 { get; set; }
+
+        /// <summary>
+        ///     The raw data of the texture.
+        /// </summary>
+        public byte[] Bytes { get; set; }
+
+        /// <summary>
+        ///     Extended metadata present in headerless console TPF textures.
+        /// </summary>
+        public TexHeader Header { get; set; }
+
+        /// <summary>
+        ///     Unknown optional data; null if not present.
+        /// </summary>
+        public FloatStruct FloatStruct { get; set; }
+
         internal void WriteHeader(BinaryWriterEx bw, int index, TPFPlatform platform, byte flag2)
         {
             if (platform == TPFPlatform.PC)
             {
-                DDS dds = new DDS(Bytes);
+                var dds = new DDS(Bytes);
                 if (dds.dwCaps2.HasFlag(DDS.DDSCAPS2.CUBEMAP))
                     Type = TexType.Cubemap;
                 else if (dds.dwCaps2.HasFlag(DDS.DDSCAPS2.VOLUME))
@@ -313,7 +375,7 @@ public partial class TPF : SoulsFile<TPF>, IEnumerable<TPF.Texture>
         {
             bw.FillUInt32($"FileData{index}", (uint)bw.Position);
 
-            byte[] bytes = Bytes;
+            var bytes = Bytes;
             if (Flags1 == 2 || Flags1 == 3)
                 bytes = DCX.Compress(bytes, DCX.Type.DCP_EDGE);
 
@@ -322,7 +384,7 @@ public partial class TPF : SoulsFile<TPF>, IEnumerable<TPF.Texture>
         }
 
         /// <summary>
-        /// Attempt to create a full DDS file from headerless console textures. Very very very poor support at the moment.
+        ///     Attempt to create a full DDS file from headerless console textures. Very very very poor support at the moment.
         /// </summary>
         public byte[] Headerize()
         {
@@ -330,7 +392,7 @@ public partial class TPF : SoulsFile<TPF>, IEnumerable<TPF.Texture>
         }
 
         /// <summary>
-        /// Returns the name of this texture.
+        ///     Returns the name of this texture.
         /// </summary>
         public override string ToString()
         {
@@ -339,110 +401,49 @@ public partial class TPF : SoulsFile<TPF>, IEnumerable<TPF.Texture>
     }
 
     /// <summary>
-    /// The platform of the game a TPF is for.
-    /// </summary>
-    public enum TPFPlatform : byte
-    {
-        /// <summary>
-        /// Headered DDS with minimal metadata.
-        /// </summary>
-        PC = 0,
-
-        /// <summary>
-        /// Headerless DDS with pre-DX10 metadata.
-        /// </summary>
-        Xbox360 = 1,
-
-        /// <summary>
-        /// Headerless DDS with pre-DX10 metadata.
-        /// </summary>
-        PS3 = 2,
-
-        /// <summary>
-        /// Headerless DDS with DX10 metadata.
-        /// </summary>
-        PS4 = 4,
-
-        /// <summary>
-        /// Headerless DDS with DX10 metadata.
-        /// </summary>
-        Xbone = 5,
-    }
-
-    /// <summary>
-    /// Type of texture in a TPF.
-    /// </summary>
-    public enum TexType : byte
-    {
-        /// <summary>
-        /// One 2D texture.
-        /// </summary>
-        Texture = 0,
-
-        /// <summary>
-        /// Six 2D textures.
-        /// </summary>
-        Cubemap = 1,
-
-        /// <summary>
-        /// One 3D texture.
-        /// </summary>
-        Volume = 2,
-    }
-
-    /// <summary>
-    /// Extra metadata for headerless textures used in console versions.
+    ///     Extra metadata for headerless textures used in console versions.
     /// </summary>
     public class TexHeader
     {
         /// <summary>
-        /// Width of the texture, in pixels.
+        ///     Width of the texture, in pixels.
         /// </summary>
         public short Width { get; set; }
 
         /// <summary>
-        /// Height of the texture, in pixels.
+        ///     Height of the texture, in pixels.
         /// </summary>
         public short Height { get; set; }
 
         /// <summary>
-        /// Number of textures in the array, either 1 for normal textures or 6 for cubemaps.
+        ///     Number of textures in the array, either 1 for normal textures or 6 for cubemaps.
         /// </summary>
         public int TextureCount { get; set; }
 
         /// <summary>
-        /// Unknown; PS3 only.
+        ///     Unknown; PS3 only.
         /// </summary>
         public int Unk1 { get; set; }
 
         /// <summary>
-        /// Unknown; 0x0 or 0xAAE4 in DeS, 0xD in DS3.
+        ///     Unknown; 0x0 or 0xAAE4 in DeS, 0xD in DS3.
         /// </summary>
         public int Unk2 { get; set; }
 
         /// <summary>
-        /// Microsoft DXGI_FORMAT.
+        ///     Microsoft DXGI_FORMAT.
         /// </summary>
         public int DXGIFormat { get; set; }
     }
 
     /// <summary>
-    /// Unknown optional data for textures.
+    ///     Unknown optional data for textures.
     /// </summary>
     public class FloatStruct
     {
-        /// <summary>
-        /// Unknown; probably some kind of ID.
-        /// </summary>
-        public int Unk00 { get; set; }
 
         /// <summary>
-        /// Unknown; not confirmed to always be floats.
-        /// </summary>
-        public List<float> Values { get; set; }
-
-        /// <summary>
-        /// Creates an empty FloatStruct.
+        ///     Creates an empty FloatStruct.
         /// </summary>
         public FloatStruct()
         {
@@ -452,12 +453,22 @@ public partial class TPF : SoulsFile<TPF>, IEnumerable<TPF.Texture>
         internal FloatStruct(BinaryReaderEx br)
         {
             Unk00 = br.ReadInt32();
-            int length = br.ReadInt32();
+            var length = br.ReadInt32();
             if (length < 0 || length % 4 != 0)
                 throw new InvalidDataException($"Unexpected FloatStruct length: {length}");
 
             Values = new List<float>(br.ReadSingles(length / 4));
         }
+
+        /// <summary>
+        ///     Unknown; probably some kind of ID.
+        /// </summary>
+        public int Unk00 { get; set; }
+
+        /// <summary>
+        ///     Unknown; not confirmed to always be floats.
+        /// </summary>
+        public List<float> Values { get; set; }
 
         internal void Write(BinaryWriterEx bw)
         {

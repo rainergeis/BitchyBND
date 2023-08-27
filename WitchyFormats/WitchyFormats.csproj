@@ -1,20 +1,34 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net7.0-windows</TargetFramework>
-    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
-    <RootNamespace>WitchyBND</RootNamespace>
-    <IsPackable>false</IsPackable>
-    <Title>WitchyFormats</Title>
-    <AssemblyTitle>WitchyFormats</AssemblyTitle>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>net7.0-windows</TargetFramework>
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+        <RootNamespace>WitchyBND</RootNamespace>
+        <IsPackable>false</IsPackable>
+        <Title>WitchyFormats</Title>
+        <AssemblyTitle>WitchyFormats</AssemblyTitle>
+    </PropertyGroup>
 
-  <PropertyGroup>
-    <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
-  </PropertyGroup>
+    <PropertyGroup>
+        <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\SoulsFormats\SoulsFormats.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\SoulsFormats\SoulsFormats.csproj" />
+        <ProjectReference Include="..\StudioUtils\StudioUtils.csproj" />
+        <ProjectReference Include="..\WitchyBND.Context\WitchyBND.Context.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="Formats\MSB\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Remove="Formats\MSB\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="Formats\MSB\**" />
+    </ItemGroup>
 
 </Project>

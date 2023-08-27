@@ -15,14 +15,37 @@ namespace WitchyFormats;
 // Assembly location: SoulsFormats.dll
 public class GPARAM : SoulsFile<GPARAM>
 {
+
+    public enum GPGame : uint
+    {
+        DarkSouls2 = 2,
+        DarkSouls3 = 3,
+        Sekiro = 5
+    }
+
+    public enum ParamType : byte
+    {
+        Byte = 1,
+        Short = 2,
+        IntA = 3,
+        BoolA = 5,
+        IntB = 7,
+        Float = 9,
+        BoolB = 11, // 0x0B
+        Float2 = 12, // 0x0C
+        Float3 = 13, // 0x0D
+        Float4 = 14, // 0x0E
+        Byte4 = 15 // 0x0F
+    }
+
     public GPGame Game;
+    public List<Group> Groups;
     public bool Unk0D;
     public int Unk14;
+    public List<Unk3> Unk3s;
     public float Unk40;
     public float Unk50;
-    public List<Group> Groups;
     public byte[] UnkBlock2;
-    public List<Unk3> Unk3s;
 
     public GPARAM()
     {
@@ -32,11 +55,13 @@ public class GPARAM : SoulsFile<GPARAM>
         Unk3s = new List<Unk3>();
     }
 
+    public Group this[string name1] => Groups.Find((Predicate<Group>)(group => group.Name1 == name1));
+
     protected override bool Is(BinaryReaderEx br)
     {
         if (br.Length < 4L)
             return false;
-        string ascii = br.GetASCII(0L, 4);
+        var ascii = br.GetASCII(0L, 4);
         return ascii == "filt" || ascii == "f\0i\0";
     }
 
@@ -49,17 +74,17 @@ public class GPARAM : SoulsFile<GPARAM>
         int num1 = br.AssertByte(new byte[1]);
         Unk0D = br.ReadBoolean();
         int num2 = br.AssertInt16(new short[1]);
-        int num3 = br.ReadInt32();
+        var num3 = br.ReadInt32();
         Unk14 = br.ReadInt32();
         br.AssertInt32(64, 80, 84);
-        Offsets offsets = new Offsets();
+        var offsets = new Offsets();
         offsets.GroupHeaders = br.ReadInt32();
         offsets.ParamHeaderOffsets = br.ReadInt32();
         offsets.ParamHeaders = br.ReadInt32();
         offsets.Values = br.ReadInt32();
         offsets.ValueIDs = br.ReadInt32();
         offsets.Unk2 = br.ReadInt32();
-        int capacity = br.ReadInt32();
+        var capacity = br.ReadInt32();
         offsets.Unk3 = br.ReadInt32();
         offsets.Unk3ValueIDs = br.ReadInt32();
         Unk40 = br.ReadSingle();
@@ -73,25 +98,25 @@ public class GPARAM : SoulsFile<GPARAM>
         if (Game == GPGame.Sekiro)
             Unk50 = br.ReadSingle();
         Groups = new List<Group>(num3);
-        for (int index = 0; index < num3; ++index)
+        for (var index = 0; index < num3; ++index)
             Groups.Add(new Group(br, Game, index, offsets));
         UnkBlock2 = br.GetBytes(offsets.Unk2, offsets.Unk3 - offsets.Unk2);
         br.Position = offsets.Unk3;
         Unk3s = new List<Unk3>(capacity);
-        for (int index = 0; index < capacity; ++index)
+        for (var index = 0; index < capacity; ++index)
             Unk3s.Add(new Unk3(br, Game, offsets));
         if (Game != GPGame.DarkSouls3 && Game != GPGame.Sekiro)
             return;
-        int[] int32s = br.GetInt32s(offsets.CommentOffsetsOffsets, num3);
-        int num4 = offsets.Comments - offsets.CommentOffsets;
-        for (int index1 = 0; index1 < num3; ++index1)
+        var int32s = br.GetInt32s(offsets.CommentOffsetsOffsets, num3);
+        var num4 = offsets.Comments - offsets.CommentOffsets;
+        for (var index1 = 0; index1 < num3; ++index1)
         {
-            int num5 = index1 != num3 - 1 ? (int32s[index1 + 1] - int32s[index1]) / 4 : (num4 - int32s[index1]) / 4;
+            var num5 = index1 != num3 - 1 ? (int32s[index1 + 1] - int32s[index1]) / 4 : (num4 - int32s[index1]) / 4;
             br.Position = offsets.CommentOffsets + int32s[index1];
-            for (int index2 = 0; index2 < num5; ++index2)
+            for (var index2 = 0; index2 < num5; ++index2)
             {
-                int num6 = br.ReadInt32();
-                string utF16 = br.GetUTF16(offsets.Comments + num6);
+                var num6 = br.ReadInt32();
+                var utF16 = br.GetUTF16(offsets.Comments + num6);
                 Groups[index1].Comments.Add(utF16);
             }
         }
@@ -131,59 +156,50 @@ public class GPARAM : SoulsFile<GPARAM>
         if (Game == GPGame.Sekiro)
             bw.WriteSingle(Unk50);
         bw.FillInt32("HeaderSize", (int)bw.Position);
-        for (int index = 0; index < Groups.Count; ++index)
+        for (var index = 0; index < Groups.Count; ++index)
             Groups[index].WriteHeaderOffset(bw, index);
-        int position1 = (int)bw.Position;
+        var position1 = (int)bw.Position;
         bw.FillInt32("GroupHeadersOffset", position1);
-        for (int index = 0; index < Groups.Count; ++index)
+        for (var index = 0; index < Groups.Count; ++index)
             Groups[index].WriteHeader(bw, Game, index, position1);
-        int position2 = (int)bw.Position;
+        var position2 = (int)bw.Position;
         bw.FillInt32("ParamHeaderOffsetsOffset", position2);
-        for (int index = 0; index < Groups.Count; ++index)
+        for (var index = 0; index < Groups.Count; ++index)
             Groups[index].WriteParamHeaderOffsets(bw, index, position2);
-        int position3 = (int)bw.Position;
+        var position3 = (int)bw.Position;
         bw.FillInt32("ParamHeadersOffset", position3);
-        for (int index = 0; index < Groups.Count; ++index)
+        for (var index = 0; index < Groups.Count; ++index)
             Groups[index].WriteParamHeaders(bw, Game, index, position3);
-        int position4 = (int)bw.Position;
+        var position4 = (int)bw.Position;
         bw.FillInt32("ValuesOffset", position4);
-        for (int index = 0; index < Groups.Count; ++index)
+        for (var index = 0; index < Groups.Count; ++index)
             Groups[index].WriteValues(bw, index, position4);
-        int position5 = (int)bw.Position;
+        var position5 = (int)bw.Position;
         bw.FillInt32("ValueIDsOffset", (int)bw.Position);
-        for (int index = 0; index < Groups.Count; ++index)
+        for (var index = 0; index < Groups.Count; ++index)
             Groups[index].WriteValueIDs(bw, Game, index, position5);
         bw.FillInt32("UnkOffset2", (int)bw.Position);
         bw.WriteBytes(UnkBlock2);
         bw.FillInt32("UnkOffset3", (int)bw.Position);
-        for (int index = 0; index < Unk3s.Count; ++index)
+        for (var index = 0; index < Unk3s.Count; ++index)
             Unk3s[index].WriteHeader(bw, Game, index);
-        int position6 = (int)bw.Position;
+        var position6 = (int)bw.Position;
         bw.FillInt32("Unk3ValuesOffset", position6);
-        for (int index = 0; index < Unk3s.Count; ++index)
+        for (var index = 0; index < Unk3s.Count; ++index)
             Unk3s[index].WriteValues(bw, Game, index, position6);
         if (Game != GPGame.DarkSouls3 && Game != GPGame.Sekiro)
             return;
         bw.FillInt32("CommentOffsetsOffsetsOffset", (int)bw.Position);
-        for (int index = 0; index < Groups.Count; ++index)
+        for (var index = 0; index < Groups.Count; ++index)
             Groups[index].WriteCommentOffsetsOffset(bw, index);
-        int position7 = (int)bw.Position;
+        var position7 = (int)bw.Position;
         bw.FillInt32("CommentOffsetsOffset", position7);
-        for (int index = 0; index < Groups.Count; ++index)
+        for (var index = 0; index < Groups.Count; ++index)
             Groups[index].WriteCommentOffsets(bw, index, position7);
-        int position8 = (int)bw.Position;
+        var position8 = (int)bw.Position;
         bw.FillInt32("CommentsOffset", position8);
-        for (int index = 0; index < Groups.Count; ++index)
+        for (var index = 0; index < Groups.Count; ++index)
             Groups[index].WriteComments(bw, index, position8);
-    }
-
-    public Group this[string name1] => Groups.Find((Predicate<Group>)(group => group.Name1 == name1));
-
-    public enum GPGame : uint
-    {
-        DarkSouls2 = 2,
-        DarkSouls3 = 3,
-        Sekiro = 5,
     }
 
     internal struct Offsets
@@ -203,10 +219,10 @@ public class GPARAM : SoulsFile<GPARAM>
 
     public class Group
     {
+        public List<string> Comments;
         public string Name1;
         public string Name2;
         public List<Param> Params;
-        public List<string> Comments;
 
         public Group(string name1, string name2)
         {
@@ -218,10 +234,10 @@ public class GPARAM : SoulsFile<GPARAM>
 
         internal Group(BinaryReaderEx br, GPGame game, int index, Offsets offsets)
         {
-            int num1 = br.ReadInt32();
+            var num1 = br.ReadInt32();
             br.StepIn(offsets.GroupHeaders + num1);
-            int capacity = br.ReadInt32();
-            int num2 = br.ReadInt32();
+            var capacity = br.ReadInt32();
+            var num2 = br.ReadInt32();
             if (game == GPGame.DarkSouls2)
             {
                 Name1 = br.ReadShiftJIS();
@@ -234,20 +250,22 @@ public class GPARAM : SoulsFile<GPARAM>
 
             br.StepIn(offsets.ParamHeaderOffsets + num2);
             Params = new List<Param>(capacity);
-            for (int index1 = 0; index1 < capacity; ++index1)
+            for (var index1 = 0; index1 < capacity; ++index1)
                 Params.Add(new Param(br, game, offsets));
             br.StepOut();
             br.StepOut();
             Comments = new List<string>();
         }
 
+        public Param this[string name1] => Params.Find((Predicate<Param>)(param => param.Name1 == name1));
+
         internal void WriteHeaderOffset(BinaryWriterEx bw, int groupIndex)
         {
             BinaryWriterEx binaryWriterEx = bw;
-            DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(17, 1);
+            var interpolatedStringHandler = new DefaultInterpolatedStringHandler(17, 1);
             interpolatedStringHandler.AppendLiteral("GroupHeaderOffset");
             interpolatedStringHandler.AppendFormatted(groupIndex);
-            string stringAndClear = interpolatedStringHandler.ToStringAndClear();
+            var stringAndClear = interpolatedStringHandler.ToStringAndClear();
             binaryWriterEx.ReserveInt32(stringAndClear);
         }
 
@@ -258,18 +276,18 @@ public class GPARAM : SoulsFile<GPARAM>
             int groupHeadersOffset)
         {
             BinaryWriterEx binaryWriterEx1 = bw;
-            DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(17, 1);
+            var interpolatedStringHandler = new DefaultInterpolatedStringHandler(17, 1);
             interpolatedStringHandler.AppendLiteral("GroupHeaderOffset");
             interpolatedStringHandler.AppendFormatted(groupIndex);
-            string stringAndClear1 = interpolatedStringHandler.ToStringAndClear();
-            int num = (int)bw.Position - groupHeadersOffset;
+            var stringAndClear1 = interpolatedStringHandler.ToStringAndClear();
+            var num = (int)bw.Position - groupHeadersOffset;
             binaryWriterEx1.FillInt32(stringAndClear1, num);
             bw.WriteInt32(Params.Count);
             BinaryWriterEx binaryWriterEx2 = bw;
             interpolatedStringHandler = new DefaultInterpolatedStringHandler(24, 1);
             interpolatedStringHandler.AppendLiteral("ParamHeaderOffsetsOffset");
             interpolatedStringHandler.AppendFormatted(groupIndex);
-            string stringAndClear2 = interpolatedStringHandler.ToStringAndClear();
+            var stringAndClear2 = interpolatedStringHandler.ToStringAndClear();
             binaryWriterEx2.ReserveInt32(stringAndClear2);
             if (game == GPGame.DarkSouls2)
             {
@@ -290,13 +308,13 @@ public class GPARAM : SoulsFile<GPARAM>
             int paramHeaderOffsetsOffset)
         {
             BinaryWriterEx binaryWriterEx = bw;
-            DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(24, 1);
+            var interpolatedStringHandler = new DefaultInterpolatedStringHandler(24, 1);
             interpolatedStringHandler.AppendLiteral("ParamHeaderOffsetsOffset");
             interpolatedStringHandler.AppendFormatted(groupIndex);
-            string stringAndClear = interpolatedStringHandler.ToStringAndClear();
-            int num = (int)bw.Position - paramHeaderOffsetsOffset;
+            var stringAndClear = interpolatedStringHandler.ToStringAndClear();
+            var num = (int)bw.Position - paramHeaderOffsetsOffset;
             binaryWriterEx.FillInt32(stringAndClear, num);
-            for (int index = 0; index < Params.Count; ++index)
+            for (var index = 0; index < Params.Count; ++index)
                 Params[index].WriteParamHeaderOffset(bw, groupIndex, index);
         }
 
@@ -306,13 +324,13 @@ public class GPARAM : SoulsFile<GPARAM>
             int groupindex,
             int paramHeadersOffset)
         {
-            for (int index = 0; index < Params.Count; ++index)
+            for (var index = 0; index < Params.Count; ++index)
                 Params[index].WriteParamHeader(bw, game, groupindex, index, paramHeadersOffset);
         }
 
         internal void WriteValues(BinaryWriterEx bw, int groupindex, int valuesOffset)
         {
-            for (int index = 0; index < Params.Count; ++index)
+            for (var index = 0; index < Params.Count; ++index)
                 Params[index].WriteValues(bw, groupindex, index, valuesOffset);
         }
 
@@ -322,30 +340,30 @@ public class GPARAM : SoulsFile<GPARAM>
             int groupIndex,
             int valueIDsOffset)
         {
-            for (int index = 0; index < Params.Count; ++index)
+            for (var index = 0; index < Params.Count; ++index)
                 Params[index].WriteValueIDs(bw, game, groupIndex, index, valueIDsOffset);
         }
 
         internal void WriteCommentOffsetsOffset(BinaryWriterEx bw, int index)
         {
             BinaryWriterEx binaryWriterEx = bw;
-            DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(20, 1);
+            var interpolatedStringHandler = new DefaultInterpolatedStringHandler(20, 1);
             interpolatedStringHandler.AppendLiteral("CommentOffsetsOffset");
             interpolatedStringHandler.AppendFormatted(index);
-            string stringAndClear = interpolatedStringHandler.ToStringAndClear();
+            var stringAndClear = interpolatedStringHandler.ToStringAndClear();
             binaryWriterEx.ReserveInt32(stringAndClear);
         }
 
         internal void WriteCommentOffsets(BinaryWriterEx bw, int index, int commentOffsetsOffset)
         {
             BinaryWriterEx binaryWriterEx1 = bw;
-            DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(20, 1);
+            var interpolatedStringHandler = new DefaultInterpolatedStringHandler(20, 1);
             interpolatedStringHandler.AppendLiteral("CommentOffsetsOffset");
             interpolatedStringHandler.AppendFormatted(index);
-            string stringAndClear1 = interpolatedStringHandler.ToStringAndClear();
-            int num = (int)bw.Position - commentOffsetsOffset;
+            var stringAndClear1 = interpolatedStringHandler.ToStringAndClear();
+            var num = (int)bw.Position - commentOffsetsOffset;
             binaryWriterEx1.FillInt32(stringAndClear1, num);
-            for (int index1 = 0; index1 < Comments.Count; ++index1)
+            for (var index1 = 0; index1 < Comments.Count; ++index1)
             {
                 BinaryWriterEx binaryWriterEx2 = bw;
                 interpolatedStringHandler = new DefaultInterpolatedStringHandler(14, 2);
@@ -353,58 +371,44 @@ public class GPARAM : SoulsFile<GPARAM>
                 interpolatedStringHandler.AppendFormatted(index);
                 interpolatedStringHandler.AppendLiteral(":");
                 interpolatedStringHandler.AppendFormatted(index1);
-                string stringAndClear2 = interpolatedStringHandler.ToStringAndClear();
+                var stringAndClear2 = interpolatedStringHandler.ToStringAndClear();
                 binaryWriterEx2.ReserveInt32(stringAndClear2);
             }
         }
 
         internal void WriteComments(BinaryWriterEx bw, int index, int commentsOffset)
         {
-            for (int index1 = 0; index1 < Comments.Count; ++index1)
+            for (var index1 = 0; index1 < Comments.Count; ++index1)
             {
                 BinaryWriterEx binaryWriterEx = bw;
-                DefaultInterpolatedStringHandler
+                var
                     interpolatedStringHandler = new DefaultInterpolatedStringHandler(14, 2);
                 interpolatedStringHandler.AppendLiteral("CommentOffset");
                 interpolatedStringHandler.AppendFormatted(index);
                 interpolatedStringHandler.AppendLiteral(":");
                 interpolatedStringHandler.AppendFormatted(index1);
-                string stringAndClear = interpolatedStringHandler.ToStringAndClear();
-                int num = (int)bw.Position - commentsOffset;
+                var stringAndClear = interpolatedStringHandler.ToStringAndClear();
+                var num = (int)bw.Position - commentsOffset;
                 binaryWriterEx.FillInt32(stringAndClear, num);
                 bw.WriteUTF16(Comments[index1], true);
                 bw.Pad(4);
             }
         }
 
-        public Param this[string name1] => Params.Find((Predicate<Param>)(param => param.Name1 == name1));
-
-        public override string ToString() => Name2 == null ? Name1 : Name1 + " | " + Name2;
-    }
-
-    public enum ParamType : byte
-    {
-        Byte = 1,
-        Short = 2,
-        IntA = 3,
-        BoolA = 5,
-        IntB = 7,
-        Float = 9,
-        BoolB = 11, // 0x0B
-        Float2 = 12, // 0x0C
-        Float3 = 13, // 0x0D
-        Float4 = 14, // 0x0E
-        Byte4 = 15, // 0x0F
+        public override string ToString()
+        {
+            return Name2 == null ? Name1 : Name1 + " | " + Name2;
+        }
     }
 
     public class Param
     {
         public string Name1;
         public string Name2;
-        public ParamType Type;
-        public List<object> Values;
-        public List<int> ValueIDs;
         public List<float> TimeOfDay;
+        public ParamType Type;
+        public List<int> ValueIDs;
+        public List<object> Values;
 
         public Param(string name1, string name2, ParamType type)
         {
@@ -418,12 +422,12 @@ public class GPARAM : SoulsFile<GPARAM>
 
         internal Param(BinaryReaderEx br, GPGame game, Offsets offsets)
         {
-            int num1 = br.ReadInt32();
+            var num1 = br.ReadInt32();
             br.StepIn(offsets.ParamHeaders + num1);
-            int num2 = br.ReadInt32();
-            int num3 = br.ReadInt32();
+            var num2 = br.ReadInt32();
+            var num3 = br.ReadInt32();
             Type = br.ReadEnum8<ParamType>();
-            byte capacity = br.ReadByte();
+            var capacity = br.ReadByte();
             int num4 = br.AssertByte(new byte[1]);
             int num5 = br.AssertByte(new byte[1]);
             if (Type == ParamType.Byte && capacity > 1)
@@ -440,8 +444,7 @@ public class GPARAM : SoulsFile<GPARAM>
 
             br.StepIn(offsets.Values + num2);
             Values = new List<object>(capacity);
-            for (int index = 0; index < capacity; ++index)
-            {
+            for (var index = 0; index < capacity; ++index)
                 switch (Type)
                 {
                     case ParamType.Byte:
@@ -481,13 +484,12 @@ public class GPARAM : SoulsFile<GPARAM>
                         Values.Add(br.ReadBytes(4));
                         break;
                 }
-            }
 
             br.StepOut();
             br.StepIn(offsets.ValueIDs + num3);
             ValueIDs = new List<int>(capacity);
             TimeOfDay = game != GPGame.Sekiro ? null : new List<float>(capacity);
-            for (int index = 0; index < capacity; ++index)
+            for (var index = 0; index < capacity; ++index)
             {
                 ValueIDs.Add(br.ReadInt32());
                 if (game == GPGame.Sekiro)
@@ -498,15 +500,21 @@ public class GPARAM : SoulsFile<GPARAM>
             br.StepOut();
         }
 
+        public object this[int index]
+        {
+            get => Values[index];
+            set => Values[index] = value;
+        }
+
         internal void WriteParamHeaderOffset(BinaryWriterEx bw, int groupIndex, int paramIndex)
         {
             BinaryWriterEx binaryWriterEx = bw;
-            DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(18, 2);
+            var interpolatedStringHandler = new DefaultInterpolatedStringHandler(18, 2);
             interpolatedStringHandler.AppendLiteral("ParamHeaderOffset");
             interpolatedStringHandler.AppendFormatted(groupIndex);
             interpolatedStringHandler.AppendLiteral(":");
             interpolatedStringHandler.AppendFormatted(paramIndex);
-            string stringAndClear = interpolatedStringHandler.ToStringAndClear();
+            var stringAndClear = interpolatedStringHandler.ToStringAndClear();
             binaryWriterEx.ReserveInt32(stringAndClear);
         }
 
@@ -518,13 +526,13 @@ public class GPARAM : SoulsFile<GPARAM>
             int paramHeadersOffset)
         {
             BinaryWriterEx binaryWriterEx1 = bw;
-            DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(18, 2);
+            var interpolatedStringHandler = new DefaultInterpolatedStringHandler(18, 2);
             interpolatedStringHandler.AppendLiteral("ParamHeaderOffset");
             interpolatedStringHandler.AppendFormatted(groupIndex);
             interpolatedStringHandler.AppendLiteral(":");
             interpolatedStringHandler.AppendFormatted(paramIndex);
-            string stringAndClear1 = interpolatedStringHandler.ToStringAndClear();
-            int num = (int)bw.Position - paramHeadersOffset;
+            var stringAndClear1 = interpolatedStringHandler.ToStringAndClear();
+            var num = (int)bw.Position - paramHeadersOffset;
             binaryWriterEx1.FillInt32(stringAndClear1, num);
             BinaryWriterEx binaryWriterEx2 = bw;
             interpolatedStringHandler = new DefaultInterpolatedStringHandler(13, 2);
@@ -532,7 +540,7 @@ public class GPARAM : SoulsFile<GPARAM>
             interpolatedStringHandler.AppendFormatted(groupIndex);
             interpolatedStringHandler.AppendLiteral(":");
             interpolatedStringHandler.AppendFormatted(paramIndex);
-            string stringAndClear2 = interpolatedStringHandler.ToStringAndClear();
+            var stringAndClear2 = interpolatedStringHandler.ToStringAndClear();
             binaryWriterEx2.ReserveInt32(stringAndClear2);
             BinaryWriterEx binaryWriterEx3 = bw;
             interpolatedStringHandler = new DefaultInterpolatedStringHandler(15, 2);
@@ -540,7 +548,7 @@ public class GPARAM : SoulsFile<GPARAM>
             interpolatedStringHandler.AppendFormatted(groupIndex);
             interpolatedStringHandler.AppendLiteral(":");
             interpolatedStringHandler.AppendFormatted(paramIndex);
-            string stringAndClear3 = interpolatedStringHandler.ToStringAndClear();
+            var stringAndClear3 = interpolatedStringHandler.ToStringAndClear();
             binaryWriterEx3.ReserveInt32(stringAndClear3);
             bw.WriteByte((byte)Type);
             bw.WriteByte((byte)Values.Count);
@@ -566,17 +574,17 @@ public class GPARAM : SoulsFile<GPARAM>
             int valuesOffset)
         {
             BinaryWriterEx binaryWriterEx = bw;
-            DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(13, 2);
+            var interpolatedStringHandler = new DefaultInterpolatedStringHandler(13, 2);
             interpolatedStringHandler.AppendLiteral("ValuesOffset");
             interpolatedStringHandler.AppendFormatted(groupIndex);
             interpolatedStringHandler.AppendLiteral(":");
             interpolatedStringHandler.AppendFormatted(paramIndex);
-            string stringAndClear = interpolatedStringHandler.ToStringAndClear();
-            int num = (int)bw.Position - valuesOffset;
+            var stringAndClear = interpolatedStringHandler.ToStringAndClear();
+            var num = (int)bw.Position - valuesOffset;
             binaryWriterEx.FillInt32(stringAndClear, num);
-            for (int index = 0; index < Values.Count; ++index)
+            for (var index = 0; index < Values.Count; ++index)
             {
-                object obj = Values[index];
+                var obj = Values[index];
                 switch (Type)
                 {
                     case ParamType.Byte:
@@ -629,15 +637,15 @@ public class GPARAM : SoulsFile<GPARAM>
             int valueIDsOffset)
         {
             BinaryWriterEx binaryWriterEx = bw;
-            DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(15, 2);
+            var interpolatedStringHandler = new DefaultInterpolatedStringHandler(15, 2);
             interpolatedStringHandler.AppendLiteral("ValueIDsOffset");
             interpolatedStringHandler.AppendFormatted(groupIndex);
             interpolatedStringHandler.AppendLiteral(":");
             interpolatedStringHandler.AppendFormatted(paramIndex);
-            string stringAndClear = interpolatedStringHandler.ToStringAndClear();
-            int num = (int)bw.Position - valueIDsOffset;
+            var stringAndClear = interpolatedStringHandler.ToStringAndClear();
+            var num = (int)bw.Position - valueIDsOffset;
             binaryWriterEx.FillInt32(stringAndClear, num);
-            for (int index = 0; index < ValueIDs.Count; ++index)
+            for (var index = 0; index < ValueIDs.Count; ++index)
             {
                 bw.WriteInt32(ValueIDs[index]);
                 if (game == GPGame.Sekiro)
@@ -645,20 +653,17 @@ public class GPARAM : SoulsFile<GPARAM>
             }
         }
 
-        public object this[int index]
+        public override string ToString()
         {
-            get => Values[index];
-            set => Values[index] = value;
+            return Name2 == null ? Name1 : Name1 + " | " + Name2;
         }
-
-        public override string ToString() => Name2 == null ? Name1 : Name1 + " | " + Name2;
     }
 
     public class Unk3
     {
         public int GroupIndex;
-        public List<int> ValueIDs;
         public int Unk0C;
+        public List<int> ValueIDs;
 
         public Unk3(int groupIndex)
         {
@@ -669,8 +674,8 @@ public class GPARAM : SoulsFile<GPARAM>
         internal Unk3(BinaryReaderEx br, GPGame game, Offsets offsets)
         {
             GroupIndex = br.ReadInt32();
-            int count = br.ReadInt32();
-            uint num = br.ReadUInt32();
+            var count = br.ReadInt32();
+            var num = br.ReadUInt32();
             if (game == GPGame.Sekiro)
                 Unk0C = br.ReadInt32();
             ValueIDs = new List<int>(br.GetInt32s(offsets.Unk3ValueIDs + num, count));
@@ -681,10 +686,10 @@ public class GPARAM : SoulsFile<GPARAM>
             bw.WriteInt32(GroupIndex);
             bw.WriteInt32(ValueIDs.Count);
             BinaryWriterEx binaryWriterEx = bw;
-            DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(18, 1);
+            var interpolatedStringHandler = new DefaultInterpolatedStringHandler(18, 1);
             interpolatedStringHandler.AppendLiteral("Unk3ValueIDsOffset");
             interpolatedStringHandler.AppendFormatted(index);
-            string stringAndClear = interpolatedStringHandler.ToStringAndClear();
+            var stringAndClear = interpolatedStringHandler.ToStringAndClear();
             binaryWriterEx.ReserveInt32(stringAndClear);
             if (game != GPGame.Sekiro)
                 return;
@@ -700,22 +705,22 @@ public class GPARAM : SoulsFile<GPARAM>
             if (ValueIDs.Count == 0)
             {
                 BinaryWriterEx binaryWriterEx = bw;
-                DefaultInterpolatedStringHandler
+                var
                     interpolatedStringHandler = new DefaultInterpolatedStringHandler(18, 1);
                 interpolatedStringHandler.AppendLiteral("Unk3ValueIDsOffset");
                 interpolatedStringHandler.AppendFormatted(index);
-                string stringAndClear = interpolatedStringHandler.ToStringAndClear();
+                var stringAndClear = interpolatedStringHandler.ToStringAndClear();
                 binaryWriterEx.FillInt32(stringAndClear, 0);
             }
             else
             {
                 BinaryWriterEx binaryWriterEx = bw;
-                DefaultInterpolatedStringHandler
+                var
                     interpolatedStringHandler = new DefaultInterpolatedStringHandler(18, 1);
                 interpolatedStringHandler.AppendLiteral("Unk3ValueIDsOffset");
                 interpolatedStringHandler.AppendFormatted(index);
-                string stringAndClear = interpolatedStringHandler.ToStringAndClear();
-                int num = (int)bw.Position - unk3ValueIDsOffset;
+                var stringAndClear = interpolatedStringHandler.ToStringAndClear();
+                var num = (int)bw.Position - unk3ValueIDsOffset;
                 binaryWriterEx.FillInt32(stringAndClear, num);
                 bw.WriteInt32s(ValueIDs);
             }

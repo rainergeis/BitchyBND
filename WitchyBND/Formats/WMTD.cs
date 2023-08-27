@@ -4,11 +4,11 @@ using WitchyFormats;
 
 namespace WitchyBND;
 
-static class WMTD
+internal static class WMTD
 {
     public static void Unpack(this MTD mtd, string sourceFile)
     {
-        string targetFile = $"{sourceFile}.xml";
+        var targetFile = $"{sourceFile}.xml";
 
         if (File.Exists(targetFile)) WBUtil.Backup(targetFile);
 

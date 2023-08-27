@@ -18,9 +18,9 @@ public static class SecretHeaderizer
     {
         if (Encoding.ASCII.GetString(texture.Bytes, 0, 4) == "DDS ")
             return texture.Bytes;
-        DDS dds = new DDS();
+        var dds = new DDS();
         DDS.PIXELFORMAT ddspf = dds.ddspf;
-        byte format = texture.Format;
+        var format = texture.Format;
         if (format != 16 && format != 26)
         {
             DDS.DDSD ddsd = DDS.DDSD.CAPS | DDS.DDSD.HEIGHT | DDS.DDSD.WIDTH | DDS.DDSD.PIXELFORMAT |
@@ -38,11 +38,8 @@ public static class SecretHeaderizer
             dds.dwMipMapCount = texture.Mipmaps;
             DDS.DDPF ddpf = 0;
             if (format == 0 || format == 1 || format == 3 || format == 5)
-            {
                 ddpf |= DDS.DDPF.FOURCC;
-            }
             else
-            {
                 switch (format)
                 {
                     case 9:
@@ -52,15 +49,11 @@ public static class SecretHeaderizer
                         ddpf |= DDS.DDPF.RGB;
                         break;
                 }
-            }
 
             ddspf.dwFlags = ddpf;
             if (format == 0 || format == 1)
-            {
                 ddspf.dwFourCC = "DXT1";
-            }
             else
-            {
                 switch (format)
                 {
                     case 3:
@@ -73,7 +66,6 @@ public static class SecretHeaderizer
                         ddspf.dwFourCC = "\0\0\0\0";
                         break;
                 }
-            }
 
             if (format == 9 || format == 10)
                 ddspf.dwRGBBitCount = 32;

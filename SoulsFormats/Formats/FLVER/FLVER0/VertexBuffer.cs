@@ -1,43 +1,44 @@
 ﻿using System.Collections.Generic;
 
-namespace SoulsFormats
+namespace SoulsFormats;
+
+public partial class FLVER0
 {
-    public partial class FLVER0
+    private class VertexBuffer
     {
-        private class VertexBuffer
+
+        public int BufferLength;
+
+        public int BufferOffset;
+        public int LayoutIndex;
+
+        public VertexBuffer()
         {
-            public int LayoutIndex;
+        }
 
-            public int BufferLength;
+        internal VertexBuffer(BinaryReaderEx br)
+        {
+            LayoutIndex = br.ReadInt32();
+            BufferLength = br.ReadInt32();
+            BufferOffset = br.ReadInt32();
+            br.AssertInt32(0);
+        }
 
-            public int BufferOffset;
+        internal static List<VertexBuffer> ReadVertexBuffers(BinaryReaderEx br)
+        {
+            var bufferCount = br.ReadInt32();
+            var buffersOffset = br.ReadInt32();
+            br.AssertInt32(0);
+            br.AssertInt32(0);
 
-            public VertexBuffer() { }
-
-            internal VertexBuffer(BinaryReaderEx br)
+            var buffers = new List<VertexBuffer>(bufferCount);
+            br.StepIn(buffersOffset);
             {
-                LayoutIndex = br.ReadInt32();
-                BufferLength = br.ReadInt32();
-                BufferOffset = br.ReadInt32();
-                br.AssertInt32(0);
+                for (var i = 0; i < bufferCount; i++)
+                    buffers.Add(new VertexBuffer(br));
             }
-
-            internal static List<VertexBuffer> ReadVertexBuffers(BinaryReaderEx br)
-            {
-                int bufferCount = br.ReadInt32();
-                int buffersOffset = br.ReadInt32();
-                br.AssertInt32(0);
-                br.AssertInt32(0);
-
-                var buffers = new List<VertexBuffer>(bufferCount);
-                br.StepIn(buffersOffset);
-                {
-                    for (int i = 0; i < bufferCount; i++)
-                        buffers.Add(new VertexBuffer(br));
-                }
-                br.StepOut();
-                return buffers;
-            }
+            br.StepOut();
+            return buffers;
         }
     }
 }

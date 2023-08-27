@@ -1,18 +1,17 @@
-﻿using SoulsFormats.AC4;
-using System.IO;
+﻿using System.IO;
+using SoulsFormats.AC4;
 
-namespace WitchyBND
+namespace WitchyBND;
+
+internal static class WZero3
 {
-    static class WZero3
+    public static void Unpack(this Zero3 z3, string targetDir)
     {
-        public static void Unpack(this Zero3 z3, string targetDir)
+        foreach (Zero3.File file in z3.Files)
         {
-            foreach (Zero3.File file in z3.Files)
-            {
-                string outPath = $@"{targetDir}\{file.Name.Replace('/', '\\')}";
-                Directory.CreateDirectory(Path.GetDirectoryName(outPath));
-                File.WriteAllBytes(outPath, file.Bytes);
-            }
+            var outPath = $@"{targetDir}\{file.Name.Replace('/', '\\')}";
+            Directory.CreateDirectory(Path.GetDirectoryName(outPath));
+            File.WriteAllBytes(outPath, file.Bytes);
         }
     }
 }

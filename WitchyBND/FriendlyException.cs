@@ -1,9 +1,10 @@
 ﻿using System;
 
-namespace WitchyBND
+namespace WitchyBND;
+
+internal class FriendlyException : Exception
 {
-    class FriendlyException : Exception
+    public FriendlyException(string message) : base(message)
     {
-        public FriendlyException(string message) : base(message) { }
     }
 }

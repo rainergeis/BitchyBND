@@ -1,53 +1,53 @@
 ﻿using System.Collections.Generic;
 
-namespace SoulsFormats
+namespace SoulsFormats;
+
+public partial class MSB2
 {
-    public partial class MSB2
+    private class MapstudioBoneName : Param<BoneName>
     {
-        private class MapstudioBoneName : Param<BoneName>
+
+        public MapstudioBoneName()
         {
-            internal override int Version => 0;
-            internal override string Name => "MAPSTUDIO_BONE_NAME_STRING";
-
-            public List<BoneName> BoneNames { get; set; }
-
-            public MapstudioBoneName()
-            {
-                BoneNames = new List<BoneName>();
-            }
-
-            internal override BoneName ReadEntry(BinaryReaderEx br)
-            {
-                return BoneNames.EchoAdd(new BoneName(br));
-            }
-
-            public override List<BoneName> GetEntries()
-            {
-                return BoneNames;
-            }
+            BoneNames = new List<BoneName>();
         }
 
-        internal class BoneName : NamedEntry
+        internal override int Version => 0;
+        internal override string Name => "MAPSTUDIO_BONE_NAME_STRING";
+
+        public List<BoneName> BoneNames { get; }
+
+        internal override BoneName ReadEntry(BinaryReaderEx br)
         {
-            public BoneName()
-            {
-                Name = "Master";
-            }
+            return BoneNames.EchoAdd(new BoneName(br));
+        }
 
-            public BoneName DeepCopy()
-            {
-                return (BoneName)MemberwiseClone();
-            }
+        public override List<BoneName> GetEntries()
+        {
+            return BoneNames;
+        }
+    }
 
-            internal BoneName(BinaryReaderEx br)
-            {
-                Name = br.ReadUTF16();
-            }
+    internal class BoneName : NamedEntry
+    {
+        public BoneName()
+        {
+            Name = "Master";
+        }
 
-            internal override void Write(BinaryWriterEx bw, int index)
-            {
-                bw.WriteUTF16(MSB.ReambiguateName(Name), true);
-            }
+        internal BoneName(BinaryReaderEx br)
+        {
+            Name = br.ReadUTF16();
+        }
+
+        public BoneName DeepCopy()
+        {
+            return (BoneName)MemberwiseClone();
+        }
+
+        internal override void Write(BinaryWriterEx bw, int index)
+        {
+            bw.WriteUTF16(MSB.ReambiguateName(Name), true);
         }
     }
 }

@@ -1,37 +1,36 @@
 ﻿using System;
 using System.IO;
-using MATBIN = WitchyFormats.MATBIN;
+using WitchyFormats;
 
-namespace WitchyBND
+namespace WitchyBND;
+
+internal static class WMATBIN
 {
-    static class WMATBIN
+    public static bool Unpack(this MATBIN matbin, string sourceFile)
     {
-        public static bool Unpack(this MATBIN matbin, string sourceFile)
-        {
-            string targetFile = $"{sourceFile}.xml";
+        var targetFile = $"{sourceFile}.xml";
 
-            if (File.Exists(targetFile)) WBUtil.Backup(targetFile);
+        if (File.Exists(targetFile)) WBUtil.Backup(targetFile);
 
-            WBUtil.XmlSerialize<MATBIN>(matbin, targetFile);
+        WBUtil.XmlSerialize<MATBIN>(matbin, targetFile);
 
-            return false;
-        }
+        return false;
+    }
 
-        public static bool Repack(string sourceFile)
-        {
-            string outPath;
-            if (sourceFile.EndsWith(".matbin.xml"))
-                outPath = sourceFile.Replace(".matbin.xml", ".matbin");
-            else if (sourceFile.EndsWith(".matbin.dcx.xml"))
-                outPath = sourceFile.Replace(".matbin.dcx.xml", ".matbin.dcx");
-            else
-                throw new InvalidOperationException("Invalid MATBIN xml filename.");
+    public static bool Repack(string sourceFile)
+    {
+        string outPath;
+        if (sourceFile.EndsWith(".matbin.xml"))
+            outPath = sourceFile.Replace(".matbin.xml", ".matbin");
+        else if (sourceFile.EndsWith(".matbin.dcx.xml"))
+            outPath = sourceFile.Replace(".matbin.dcx.xml", ".matbin.dcx");
+        else
+            throw new InvalidOperationException("Invalid MATBIN xml filename.");
 
-            if (File.Exists(outPath)) WBUtil.Backup(outPath);
+        if (File.Exists(outPath)) WBUtil.Backup(outPath);
 
-            WBUtil.XmlDeserialize<MATBIN>(sourceFile).Write(outPath);
+        WBUtil.XmlDeserialize<MATBIN>(sourceFile).Write(outPath);
 
-            return false;
-        }
+        return false;
     }
 }

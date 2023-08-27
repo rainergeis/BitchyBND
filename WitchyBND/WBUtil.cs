@@ -1,22 +1,21 @@
-﻿using Microsoft.Win32;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
-using SoulsFormats;
 using System.Linq;
+using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Serialization;
+using Microsoft.Win32;
 using Newtonsoft.Json;
+using SoulsFormats;
+using Formatting = Newtonsoft.Json.Formatting;
+using PARAM = WitchyFormats.PARAM;
 
 namespace WitchyBND;
 
-static class WBUtil
+internal static class WBUtil
 {
-    public static string GetExeLocation()
-    {
-        return Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location);
-    }
 
     public enum GameType
     {
@@ -31,7 +30,7 @@ static class WBUtil
         SDT
     }
 
-    public static Dictionary<GameType, string> GameNames = new Dictionary<GameType, string>()
+    public static Dictionary<GameType, string> GameNames = new()
     {
         { GameType.BB, "BB" },
         { GameType.DES, "DES" },
@@ -44,6 +43,32 @@ static class WBUtil
         { GameType.SDT, "SDT" }
     };
 
+    private static readonly Regex DriveRx = new(@"^(\w\:\\)(.+)$");
+    private static readonly Regex TraversalRx = new(@"^([(..)\\\/]+)(.+)?$");
+    private static readonly Regex SlashRx = new(@"^(\\+)(.+)$");
+
+    private static readonly byte[] ds2RegulationKey =
+        { 0x40, 0x17, 0x81, 0x30, 0xDF, 0x0A, 0x94, 0x54, 0x33, 0x09, 0xE1, 0x71, 0xEC, 0xBF, 0x25, 0x4C };
+
+    private static readonly (string, string)[] _pathValueTuple =
+    {
+        (@"HKEY_CURRENT_USER\SOFTWARE\Valve\Steam", "SteamPath"),
+        (@"HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Valve\Steam", "InstallPath"),
+        (@"HKEY_LOCAL_MACHINE\SOFTWARE\Valve\Steam", "InstallPath"),
+        (@"HKEY_CURRENT_USER\SOFTWARE\Wow6432Node\Valve\Steam", "SteamPath")
+    };
+
+    private static readonly string[] OodleGames =
+    {
+        "Sekiro",
+        "ELDEN RING"
+    };
+
+    public static string GetExeLocation()
+    {
+        return Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+    }
+
     public static GameType DetermineParamdexGame(string path)
     {
         GameType? gameNullable = null;
@@ -52,15 +77,13 @@ static class WBUtil
         var witchyXmlPath = $@"{path}\_witchy-bnd4.xml";
         if (File.Exists(witchyXmlPath))
         {
-            XmlDocument xml = new XmlDocument();
+            var xml = new XmlDocument();
             xml.Load(witchyXmlPath);
 
-            string filename = xml.SelectSingleNode("bnd4/filename").InnerText;
+            var filename = xml.SelectSingleNode("bnd4/filename").InnerText;
             if (filename == "regulation.bin")
-            {
                 // We are loading ELDEN RING param
                 gameNullable = GameType.ER;
-            }
         }
 
         if (gameNullable != null)
@@ -71,14 +94,12 @@ static class WBUtil
         {
             Console.WriteLine("Could not determine param game version.");
             Console.WriteLine("Please input a game from the following list:");
-            Console.WriteLine(String.Join(", ", GameNames.Values));
-            Console.Write($"Game: ");
-            string input = Console.ReadLine().ToUpper();
-            var flippedDict = WBUtil.GameNames.ToDictionary(pair => pair.Value, pair => pair.Key);
+            Console.WriteLine(string.Join(", ", GameNames.Values));
+            Console.Write("Game: ");
+            var input = Console.ReadLine().ToUpper();
+            var flippedDict = GameNames.ToDictionary(pair => pair.Value, pair => pair.Key);
             if (string.IsNullOrEmpty(input) || !flippedDict.ContainsKey(input))
-            {
                 throw new Exception("Could not determine PARAM type.");
-            }
 
             gameNullable = flippedDict[input];
         }
@@ -87,12 +108,12 @@ static class WBUtil
     }
 
     /// <summary>
-    /// General forking madness around SoulsFormats and Paramdex means that the
-    /// Paramdex repo and the DSMS Paramdex have diverged in DataVersions in paramdefs,
-    /// which for most end users should not be a big deal.
-    /// This function excludes the SF dataversion check.
+    ///     General forking madness around SoulsFormats and Paramdex means that the
+    ///     Paramdex repo and the DSMS Paramdex have diverged in DataVersions in paramdefs,
+    ///     which for most end users should not be a big deal.
+    ///     This function excludes the SF dataversion check.
     /// </summary>
-    public static bool ApplyParamdefLessCarefully(this WitchyFormats.PARAM param, PARAMDEF paramdef)
+    public static bool ApplyParamdefLessCarefully(this PARAM param, PARAMDEF paramdef)
     {
         if (param.ParamType == paramdef.ParamType &&
             (param.DetectedSize == -1 || param.DetectedSize == paramdef.GetRowSize()))
@@ -108,30 +129,20 @@ static class WBUtil
     {
         dir = string.IsNullOrEmpty(dir) ? dir : $"{dir}\\";
 
-        if (File.Exists($"{dir}_witchy-{type}.xml"))
-        {
-            return $"{dir}_witchy-{type}.xml";
-        }
+        if (File.Exists($"{dir}_witchy-{type}.xml")) return $"{dir}_witchy-{type}.xml";
 
-        if (File.Exists($"{dir}_yabber-{type}.xml"))
-        {
-            return $"{dir}_yabber-{type}.xml";
-        }
+        if (File.Exists($"{dir}_yabber-{type}.xml")) return $"{dir}_yabber-{type}.xml";
 
         throw new Exception($"Could not find WitchyBND or Yabber {type.ToUpper()} XML");
     }
 
-    private static readonly Regex DriveRx = new Regex(@"^(\w\:\\)(.+)$");
-    private static readonly Regex TraversalRx = new Regex(@"^([(..)\\\/]+)(.+)?$");
-    private static readonly Regex SlashRx = new Regex(@"^(\\+)(.+)$");
-
 
     /// <summary>
-    /// Finds common path prefix in a list of strings.
+    ///     Finds common path prefix in a list of strings.
     /// </summary>
     public static string FindCommonRootPath(IEnumerable<string> paths)
     {
-        string root = "";
+        var root = "";
 
         var rootPath = new string(
             paths.First().Substring(0, paths.Min(s => s.Length))
@@ -140,32 +151,23 @@ static class WBUtil
         // For safety, truncate this shared string down to the last slash/backslash.
         var rootPathIndex = Math.Max(rootPath.LastIndexOf('\\'), rootPath.LastIndexOf('/'));
 
-        if (rootPath != "" && rootPathIndex != -1)
-        {
-            root = rootPath.Substring(0, rootPathIndex);
-        }
+        if (rootPath != "" && rootPathIndex != -1) root = rootPath.Substring(0, rootPathIndex);
 
         return root;
     }
 
     /// <summary>
-    /// Removes common network path roots if present.
+    ///     Removes common network path roots if present.
     /// </summary>
     public static string UnrootBNDPath(string path, string root)
     {
         path = path.Substring(root.Length);
 
         Match drive = DriveRx.Match(path);
-        if (drive.Success)
-        {
-            path = drive.Groups[2].Value;
-        }
+        if (drive.Success) path = drive.Groups[2].Value;
 
         Match traversal = TraversalRx.Match(path);
-        if (traversal.Success)
-        {
-            path = traversal.Groups[2].Value;
-        }
+        if (traversal.Success) path = traversal.Groups[2].Value;
 
         if (path.Contains("..\\") || path.Contains("../"))
             throw new InvalidDataException(
@@ -176,10 +178,7 @@ static class WBUtil
     private static string RemoveLeadingBackslashes(string path)
     {
         Match slash = SlashRx.Match(path);
-        if (slash.Success)
-        {
-            path = slash.Groups[2].Value;
-        }
+        if (slash.Success) path = slash.Groups[2].Value;
 
         return path;
     }
@@ -190,35 +189,24 @@ static class WBUtil
             File.Move(path, path + ".bak");
     }
 
-    private static byte[] ds2RegulationKey =
-        { 0x40, 0x17, 0x81, 0x30, 0xDF, 0x0A, 0x94, 0x54, 0x33, 0x09, 0xE1, 0x71, 0xEC, 0xBF, 0x25, 0x4C };
-
     /// <summary>
-    /// Decrypts and unpacks DS2's regulation BND4 from the specified path.
+    ///     Decrypts and unpacks DS2's regulation BND4 from the specified path.
     /// </summary>
     public static BND4 DecryptDS2Regulation(string path)
     {
-        byte[] bytes = File.ReadAllBytes(path);
-        byte[] iv = new byte[16];
+        var bytes = File.ReadAllBytes(path);
+        var iv = new byte[16];
         iv[0] = 0x80;
         Array.Copy(bytes, 0, iv, 1, 11);
         iv[15] = 1;
-        byte[] input = new byte[bytes.Length - 32];
+        var input = new byte[bytes.Length - 32];
         Array.Copy(bytes, 32, input, 0, bytes.Length - 32);
         using (var ms = new MemoryStream(input))
         {
-            byte[] decrypted = CryptographyUtil.DecryptAesCtr(ms, ds2RegulationKey, iv);
+            var decrypted = CryptographyUtil.DecryptAesCtr(ms, ds2RegulationKey, iv);
             return BND4.Read(decrypted);
         }
     }
-
-    static (string, string)[] _pathValueTuple = new (string, string)[]
-    {
-        (@"HKEY_CURRENT_USER\SOFTWARE\Valve\Steam", "SteamPath"),
-        (@"HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Valve\Steam", "InstallPath"),
-        (@"HKEY_LOCAL_MACHINE\SOFTWARE\Valve\Steam", "InstallPath"),
-        (@"HKEY_CURRENT_USER\SOFTWARE\Wow6432Node\Valve\Steam", "SteamPath"),
-    };
 
     // Improved detection from Gideon
     public static string TryGetGameInstallLocation(string gamePath)
@@ -226,16 +214,15 @@ static class WBUtil
         if (!gamePath.StartsWith("\\") && !gamePath.StartsWith("/"))
             return null;
 
-        string steamPath = GetSteamInstallPath();
+        var steamPath = GetSteamInstallPath();
 
         if (string.IsNullOrWhiteSpace(steamPath) || !File.Exists($@"{steamPath}\SteamApps\libraryfolders.vdf"))
             return null;
 
-        string[] libraryFolders = File.ReadAllLines($@"{steamPath}\SteamApps\libraryfolders.vdf");
+        var libraryFolders = File.ReadAllLines($@"{steamPath}\SteamApps\libraryfolders.vdf");
 
-        var pathStrings = libraryFolders.Where(str => str.Contains("\"path\""));
-        var paths = pathStrings.Select(str =>
-        {
+        IEnumerable<string> pathStrings = libraryFolders.Where(str => str.Contains("\"path\""));
+        var paths = pathStrings.Select(str => {
             var split = str.Split('"').Where((s, i) => i % 2 == 1).ToList();
             if (split.Count == 2)
                 return split[1];
@@ -243,9 +230,9 @@ static class WBUtil
             return null;
         }).ToList();
 
-        foreach (string path in paths)
+        foreach (var path in paths)
         {
-            string libraryPath = path.Replace(@"\\", @"\") + gamePath;
+            var libraryPath = path.Replace(@"\\", @"\") + gamePath;
             if (File.Exists(libraryPath))
                 return libraryPath;
         }
@@ -259,7 +246,7 @@ static class WBUtil
 
         foreach ((string Path, string Value) pathValueTuple in _pathValueTuple)
         {
-            string registryKey = pathValueTuple.Path;
+            var registryKey = pathValueTuple.Path;
             installPath = (string)Registry.GetValue(registryKey, pathValueTuple.Value, null);
 
             if (installPath != null)
@@ -269,17 +256,11 @@ static class WBUtil
         return installPath;
     }
 
-    private static string[] OodleGames =
-    {
-        "Sekiro",
-        "ELDEN RING",
-    };
-
     public static string GetOodlePath()
     {
-        foreach (string game in OodleGames)
+        foreach (var game in OodleGames)
         {
-            string path = TryGetGameInstallLocation($"\\steamapps\\common\\{game}\\Game\\oo2core_6_win64.dll");
+            var path = TryGetGameInstallLocation($"\\steamapps\\common\\{game}\\Game\\oo2core_6_win64.dll");
             if (path != null)
                 return path;
         }
@@ -289,7 +270,7 @@ static class WBUtil
 
     public static string JsonSerialize(object obj)
     {
-        return JsonConvert.SerializeObject(obj, Newtonsoft.Json.Formatting.Indented, new JsonSerializerSettings
+        return JsonConvert.SerializeObject(obj, Formatting.Indented, new JsonSerializerSettings
         {
             TypeNameHandling = TypeNameHandling.Auto
         });
@@ -305,7 +286,7 @@ static class WBUtil
 
     public static void XmlSerialize<T>(object obj, string targetFile)
     {
-        using (var xw = XmlWriter.Create(targetFile, new XmlWriterSettings() { Indent = true }))
+        using (var xw = XmlWriter.Create(targetFile, new XmlWriterSettings { Indent = true }))
         {
             var xmlSer = new XmlSerializer(typeof(T));
 
@@ -324,23 +305,23 @@ static class WBUtil
     }
 
     /// <summary>
-    /// Helpers for delimited string, with support for escaping the delimiter
-    /// character.
-    /// https://coding.abel.nu/2016/06/string-split-and-join-with-escaping/
+    ///     Helpers for delimited string, with support for escaping the delimiter
+    ///     character.
+    ///     https://coding.abel.nu/2016/06/string-split-and-join-with-escaping/
     /// </summary>
     public static class DelimitedString
     {
-        const string DelimiterString = ",";
-        const char DelimiterChar = ',';
+        private const string DelimiterString = ",";
+        private const char DelimiterChar = ',';
 
         // Use a single / as escape char, avoid \ as that would require
         // all escape chars to be escaped in the source code...
-        const char EscapeChar = '/';
-        const string EscapeString = "/";
+        private const char EscapeChar = '/';
+        private const string EscapeString = "/";
 
         /// <summary>
-        /// Join strings with a delimiter and escape any occurence of the
-        /// delimiter and the escape character in the string.
+        ///     Join strings with a delimiter and escape any occurence of the
+        ///     delimiter and the escape character in the string.
         /// </summary>
         /// <param name="strings">Strings to join</param>
         /// <returns>Joined string</returns>
@@ -360,19 +341,19 @@ static class WBUtil
         }
 
         /// <summary>
-        /// Split strings delimited strings, respecting if the delimiter
-        /// characters is escaped.
+        ///     Split strings delimited strings, respecting if the delimiter
+        ///     characters is escaped.
         /// </summary>
-        /// <param name="source">Joined string from <see cref="Join(string[])"/></param>
+        /// <param name="source">Joined string from <see cref="Join(string[])" /></param>
         /// <returns>Unescaped, split strings</returns>
         public static string[] Split(string source)
         {
             var result = new List<string>();
 
-            int segmentStart = 0;
-            for (int i = 0; i < source.Length; i++)
+            var segmentStart = 0;
+            for (var i = 0; i < source.Length; i++)
             {
-                bool readEscapeChar = false;
+                var readEscapeChar = false;
                 if (source[i] == EscapeChar)
                 {
                     readEscapeChar = true;
@@ -386,16 +367,13 @@ static class WBUtil
                     segmentStart = i + 1;
                 }
 
-                if (i == source.Length - 1)
-                {
-                    result.Add(UnEscapeString(source.Substring(segmentStart)));
-                }
+                if (i == source.Length - 1) result.Add(UnEscapeString(source.Substring(segmentStart)));
             }
 
             return result.ToArray();
         }
 
-        static string UnEscapeString(string src)
+        private static string UnEscapeString(string src)
         {
             return src.Replace(EscapeString + DelimiterString, DelimiterString)
                 .Replace(EscapeString + EscapeString, EscapeString);

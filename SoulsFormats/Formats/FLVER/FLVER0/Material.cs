@@ -1,83 +1,82 @@
 ﻿using System.Collections.Generic;
 
-namespace SoulsFormats
+namespace SoulsFormats;
+
+public partial class FLVER0
 {
-    public partial class FLVER0
-    {
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-        public class Material : IFlverMaterial
+    public class Material : IFlverMaterial
+    {
+
+        internal Material(BinaryReaderEx br, FLVER0 flv)
         {
-            public string Name { get; set; }
+            var nameOffset = br.ReadInt32();
+            var mtdOffset = br.ReadInt32();
+            var texturesOffset = br.ReadInt32();
+            var layoutsOffset = br.ReadInt32();
+            br.ReadInt32(); // Data length from name offset to end of buffer layouts
+            var layoutHeaderOffset = br.ReadInt32();
+            br.AssertInt32(0);
+            br.AssertInt32(0);
 
-            public string MTD { get; set; }
+            Name = flv.Unicode ? br.GetUTF16(nameOffset) : br.GetShiftJIS(nameOffset);
+            MTD = flv.Unicode ? br.GetUTF16(mtdOffset) : br.GetShiftJIS(mtdOffset);
 
-            public List<Texture> Textures { get; set; }
-            IReadOnlyList<IFlverTexture> IFlverMaterial.Textures => Textures;
-
-            public List<BufferLayout> Layouts { get; set; }
-
-            internal Material(BinaryReaderEx br, FLVER0 flv)
+            br.StepIn(texturesOffset);
             {
-                int nameOffset = br.ReadInt32();
-                int mtdOffset = br.ReadInt32();
-                int texturesOffset = br.ReadInt32();
-                int layoutsOffset = br.ReadInt32();
-                br.ReadInt32(); // Data length from name offset to end of buffer layouts
-                int layoutHeaderOffset = br.ReadInt32();
+                var textureCount = br.ReadByte();
+                br.AssertByte(0);
+                br.AssertByte(0);
+                br.AssertByte(0);
+                br.AssertInt32(0);
                 br.AssertInt32(0);
                 br.AssertInt32(0);
 
-                Name = flv.Unicode ? br.GetUTF16(nameOffset) : br.GetShiftJIS(nameOffset);
-                MTD = flv.Unicode ? br.GetUTF16(mtdOffset) : br.GetShiftJIS(mtdOffset);
+                Textures = new List<Texture>(textureCount);
+                for (var i = 0; i < textureCount; i++)
+                    Textures.Add(new Texture(br, flv));
+            }
+            br.StepOut();
 
-                br.StepIn(texturesOffset);
+            if (layoutHeaderOffset != 0)
+            {
+                br.StepIn(layoutHeaderOffset);
                 {
-                    byte textureCount = br.ReadByte();
-                    br.AssertByte(0);
-                    br.AssertByte(0);
-                    br.AssertByte(0);
+                    var layoutCount = br.ReadInt32();
+                    br.AssertInt32((int)br.Position + 0xC);
                     br.AssertInt32(0);
                     br.AssertInt32(0);
-                    br.AssertInt32(0);
-
-                    Textures = new List<Texture>(textureCount);
-                    for (int i = 0; i < textureCount; i++)
-                        Textures.Add(new Texture(br, flv));
+                    Layouts = new List<BufferLayout>(layoutCount);
+                    for (var i = 0; i < layoutCount; i++)
+                    {
+                        var layoutOffset = br.ReadInt32();
+                        br.StepIn(layoutOffset);
+                        {
+                            Layouts.Add(new BufferLayout(br));
+                        }
+                        br.StepOut();
+                    }
                 }
                 br.StepOut();
-
-                if (layoutHeaderOffset != 0)
+            }
+            else
+            {
+                Layouts = new List<BufferLayout>(1);
+                br.StepIn(layoutsOffset);
                 {
-                    br.StepIn(layoutHeaderOffset);
-                    {
-                        int layoutCount = br.ReadInt32();
-                        br.AssertInt32((int)br.Position + 0xC);
-                        br.AssertInt32(0);
-                        br.AssertInt32(0);
-                        Layouts = new List<BufferLayout>(layoutCount);
-                        for (int i = 0; i < layoutCount; i++)
-                        {
-                            int layoutOffset = br.ReadInt32();
-                            br.StepIn(layoutOffset);
-                            {
-                                Layouts.Add(new BufferLayout(br));
-                            }
-                            br.StepOut();
-                        }
-                    }
-                    br.StepOut();
+                    Layouts.Add(new BufferLayout(br));
                 }
-                else
-                {
-                    Layouts = new List<BufferLayout>(1);
-                    br.StepIn(layoutsOffset);
-                    {
-                        Layouts.Add(new BufferLayout(br));
-                    }
-                    br.StepOut();
-                }
+                br.StepOut();
             }
         }
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+        public List<Texture> Textures { get; set; }
+
+        public List<BufferLayout> Layouts { get; set; }
+        public string Name { get; set; }
+
+        public string MTD { get; set; }
+        IReadOnlyList<IFlverTexture> IFlverMaterial.Textures => Textures;
     }
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 }

@@ -8,13 +8,13 @@ namespace WitchyBND;
 /**
  * Code mostly adapted from FXR3-XMLR.
  */
-static class WFXR
+internal static class WFXR
 {
     public static bool Unpack(this Fxr3 fxr, string sourceFile)
     {
-        XDocument XDoc = new XDocument();
+        var XDoc = new XDocument();
 
-        using (var xmlWriter = XDoc.CreateWriter())
+        using (XmlWriter xmlWriter = XDoc.CreateWriter())
         {
             var thing = new XmlSerializer(typeof(Fxr3));
             thing.Serialize(xmlWriter, fxr);
@@ -27,13 +27,13 @@ static class WFXR
 
     public static bool Repack(string sourceFile)
     {
-        XDocument XML = XDocument.Load(sourceFile);
-        XmlSerializer test = new XmlSerializer(typeof(Fxr3));
+        var XML = XDocument.Load(sourceFile);
+        var test = new XmlSerializer(typeof(Fxr3));
         XmlReader xmlReader = XML.CreateReader();
 
         var fxr = (Fxr3)test.Deserialize(xmlReader);
 
-        string outPath = sourceFile.Replace(".fxr.xml", ".fxr");
+        var outPath = sourceFile.Replace(".fxr.xml", ".fxr");
         WBUtil.Backup(outPath);
         fxr.Write(outPath);
 

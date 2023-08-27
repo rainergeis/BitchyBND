@@ -47,7 +47,7 @@ BC7 - 16
 // TKSF Headerizer, but included here to be accesses from the DSMS TPF.
 internal static class Headerizer
 {
-    private static Dictionary<byte, int> CompressedBPB = new Dictionary<byte, int>
+    private static readonly Dictionary<byte, int> CompressedBPB = new()
     {
         [0] = 8,
         [1] = 8,
@@ -67,20 +67,20 @@ internal static class Headerizer
         [109] = 8,
         [110] = 16,
         [112] = 16,
-        [113] = 16,
+        [113] = 16
     };
 
-    private static Dictionary<byte, int> UncompressedBPP = new Dictionary<byte, int>
+    private static readonly Dictionary<byte, int> UncompressedBPP = new()
     {
         [6] = 2,
         [9] = 4,
         [10] = 4,
         [16] = 1,
         [22] = 8,
-        [105] = 4,
+        [105] = 4
     };
 
-    private static Dictionary<byte, string> FourCC = new Dictionary<byte, string>
+    private static readonly Dictionary<byte, string> FourCC = new()
     {
         [0] = "DXT1",
         [1] = "DXT1",
@@ -95,10 +95,10 @@ internal static class Headerizer
         [104] = "ATI2",
         [108] = "DXT1",
         [109] = "DXT1",
-        [110] = "DXT5",
+        [110] = "DXT5"
     };
 
-    private static byte[] DX10Formats = { 6, 100, 102, 106, 107, 112, 113 };
+    private static readonly byte[] DX10Formats = { 6, 100, 102, 106, 107, 112, 113 };
 
     public static byte[] Headerize(TPF.Texture texture)
     {
@@ -106,9 +106,9 @@ internal static class Headerizer
             return texture.Bytes;
 
         var dds = new DDS();
-        byte format = texture.Format;
-        short width = texture.Header.Width;
-        short height = texture.Header.Height;
+        var format = texture.Format;
+        var width = texture.Header.Width;
+        var height = texture.Header.Height;
         int mipCount = texture.Mipmaps;
         TPF.TexType type = texture.Type;
 
@@ -209,7 +209,7 @@ internal static class Headerizer
                 dds.header10.miscFlag = RESOURCE_MISC.TEXTURECUBE;
         }
 
-        byte[] bytes = RebuildPixelData(texture.Bytes, format, width, height, mipCount, type);
+        var bytes = RebuildPixelData(texture.Bytes, format, width, height, mipCount, type);
         return dds.Write(bytes);
     }
 
@@ -218,37 +218,39 @@ internal static class Headerizer
         return (int)Math.Ceiling(Math.Log(Math.Max(width, height), 2)) + 1;
     }
 
-    private static byte[] RebuildPixelData(byte[] bytes, byte format, short width, short height, int mipCount, TPF.TexType type)
+    private static byte[] RebuildPixelData(byte[] bytes, byte format, short width, short height, int mipCount,
+        TPF.TexType type)
     {
-        int imageCount = type == TPF.TexType.Cubemap ? 6 : 1;
-        int padDimensions = 1;
+        var imageCount = type == TPF.TexType.Cubemap ? 6 : 1;
+        var padDimensions = 1;
         if (format == 102)
             padDimensions = 32;
 
         List<Image> images;
         if (CompressedBPB.ContainsKey(format))
-            images = Image.ReadCompressed(bytes, width, height, padDimensions, imageCount, mipCount, 0x80, CompressedBPB[format]);
+            images = Image.ReadCompressed(bytes, width, height, padDimensions, imageCount, mipCount, 0x80,
+                CompressedBPB[format]);
         else if (UncompressedBPP.ContainsKey(format))
-            images = Image.ReadUncompressed(bytes, width, height, padDimensions, imageCount, mipCount, 0x80, UncompressedBPP[format]);
+            images = Image.ReadUncompressed(bytes, width, height, padDimensions, imageCount, mipCount, 0x80,
+                UncompressedBPP[format]);
         else
             throw new NotSupportedException($"Cannot decompose format {format}.");
 
         if (format == 10 || format == 102)
         {
-            int texelSize = -1;
+            var texelSize = -1;
             if (format == 10)
                 texelSize = 4;
             else if (format == 102)
                 texelSize = 16;
 
             foreach (Image image in images)
-            {
-                for (int i = 0; i < image.MipLevels.Count; i++)
+                for (var i = 0; i < image.MipLevels.Count; i++)
                 {
-                    int scale = (int)Math.Pow(2, i);
-                    image.MipLevels[i] = DeswizzleMipLevel(image.MipLevels[i], format, texelSize, width / scale, height / scale, padDimensions);
+                    var scale = (int)Math.Pow(2, i);
+                    image.MipLevels[i] = DeswizzleMipLevel(image.MipLevels[i], format, texelSize, width / scale,
+                        height / scale, padDimensions);
                 }
-            }
         }
 
         return Image.Write(images);
@@ -259,11 +261,12 @@ internal static class Headerizer
         return (int)Math.Ceiling(value / (float)pad) * pad;
     }
 
-    private static byte[] DeswizzleMipLevel(byte[] swizzled, byte format, int texelSize, int width, int height, int padDimensions)
+    private static byte[] DeswizzleMipLevel(byte[] swizzled, byte format, int texelSize, int width, int height,
+        int padDimensions)
     {
-        int paddedWidth = PadTo(width, padDimensions);
-        int paddedHeight = PadTo(height, padDimensions);
-        int texelWidth = paddedWidth;
+        var paddedWidth = PadTo(width, padDimensions);
+        var paddedHeight = PadTo(height, padDimensions);
+        var texelWidth = paddedWidth;
         if (format == 102)
             texelWidth = paddedWidth / 4;
 
@@ -271,31 +274,34 @@ internal static class Headerizer
         if (format == 10)
         {
             unswizzled = DeswizzlePS3(swizzled, texelSize, texelWidth);
-            byte[] trimmed = new byte[unswizzled.Length / 4 * 3];
-            for (int j = 0; j < unswizzled.Length / 4; j++)
+            var trimmed = new byte[unswizzled.Length / 4 * 3];
+            for (var j = 0; j < unswizzled.Length / 4; j++)
             {
                 Array.Reverse(unswizzled, j * 4, 4);
                 Array.Copy(unswizzled, j * 4, trimmed, j * 3, 3);
             }
+
             unswizzled = trimmed;
         }
         else if (format == 102)
         {
             unswizzled = DeswizzlePS4(swizzled, format, texelSize, paddedWidth, paddedHeight);
-            byte[] trimmed = new byte[(int)Math.Max(1, width / 4f) * (int)Math.Max(1, height / 4f) * texelSize];
-            for (int j = 0; j < height / 4; j++)
+            var trimmed = new byte[(int)Math.Max(1, width / 4f) * (int)Math.Max(1, height / 4f) * texelSize];
+            for (var j = 0; j < height / 4; j++)
             {
-                int sourceIndex = j * texelSize * texelWidth;
-                int destIndex = j * texelSize * (width / 4);
-                int length = texelSize * (width / 4);
+                var sourceIndex = j * texelSize * texelWidth;
+                var destIndex = j * texelSize * (width / 4);
+                var length = texelSize * (width / 4);
                 Array.Copy(unswizzled, sourceIndex, trimmed, destIndex, length);
             }
+
             unswizzled = trimmed;
         }
         else
         {
             throw new NotSupportedException($"Cannot deswizzle format {format}.");
         }
+
         return unswizzled;
     }
 
@@ -303,18 +309,18 @@ internal static class Headerizer
     // https://web.archive.org/web/20080704105751/http://www.insomniacgames.com/tech/articles/0108/curiouslysmallcode.php
     private static byte[] DeswizzlePS3(byte[] swizzled, int texelSize, int texelWidth)
     {
-        byte[] unswizzled = new byte[swizzled.Length];
+        var unswizzled = new byte[swizzled.Length];
 
-        int x = 0;
-        int y = 0;
-        for (int i = 0; i < swizzled.Length / texelSize; i++)
+        var x = 0;
+        var y = 0;
+        for (var i = 0; i < swizzled.Length / texelSize; i++)
         {
             Array.Copy(swizzled, i * texelSize, unswizzled, y * texelWidth * texelSize + x * texelSize, texelSize);
 
-            int and0 = x & y;
-            int and1 = and0 + 1;
-            int xinc = and0 ^ and1;
-            int yinc = x & xinc;
+            var and0 = x & y;
+            var and1 = and0 + 1;
+            var xinc = and0 ^ and1;
+            var yinc = x & xinc;
             x ^= xinc;
             y ^= yinc;
         }
@@ -324,44 +330,50 @@ internal static class Headerizer
 
     private static byte[] DeswizzlePS4(byte[] swizzled, byte format, int texelSize, int width, int height)
     {
-        byte[] unswizzled = new byte[swizzled.Length];
+        var unswizzled = new byte[swizzled.Length];
 
-        int blocksH = (width + 31) / 32;
-        int blocksV = (height + 31) / 32;
-        int swizzleBlockSize = 32;
+        var blocksH = (width + 31) / 32;
+        var blocksV = (height + 31) / 32;
+        var swizzleBlockSize = 32;
 
-        int readOffset = 0;
+        var readOffset = 0;
         int h;
-        int v = 0;
-        for (int i = 0; i < blocksV; i++)
+        var v = 0;
+        for (var i = 0; i < blocksV; i++)
         {
             h = 0;
-            for (int j = 0; j < blocksH; j++)
+            for (var j = 0; j < blocksH; j++)
             {
-                int writeOffset = h + v;
+                var writeOffset = h + v;
                 DeswizzlePS4Block(swizzled, unswizzled, ref readOffset, width, texelSize, 32, 32, writeOffset, 2);
                 h += swizzleBlockSize / 4 * texelSize;
             }
+
             v += swizzleBlockSize * width;
         }
 
         return unswizzled;
     }
 
-    private static void DeswizzlePS4Block(byte[] swizzled, byte[] unswizzled, ref int readOffset, int imageWidth, int texelSize, int blockWidth, int blockHeight, int writeOffset, int offsetFactor)
+    private static void DeswizzlePS4Block(byte[] swizzled, byte[] unswizzled, ref int readOffset, int imageWidth,
+        int texelSize, int blockWidth, int blockHeight, int writeOffset, int offsetFactor)
     {
         if (blockWidth * blockHeight > 16)
         {
-            DeswizzlePS4Block(swizzled, unswizzled, ref readOffset, imageWidth, texelSize, blockWidth / 2, blockHeight / 2,
+            DeswizzlePS4Block(swizzled, unswizzled, ref readOffset, imageWidth, texelSize, blockWidth / 2,
+                blockHeight / 2,
                 writeOffset,
                 offsetFactor * 2);
-            DeswizzlePS4Block(swizzled, unswizzled, ref readOffset, imageWidth, texelSize, blockWidth / 2, blockHeight / 2,
+            DeswizzlePS4Block(swizzled, unswizzled, ref readOffset, imageWidth, texelSize, blockWidth / 2,
+                blockHeight / 2,
                 writeOffset + blockWidth / 8 * texelSize,
                 offsetFactor * 2);
-            DeswizzlePS4Block(swizzled, unswizzled, ref readOffset, imageWidth, texelSize, blockWidth / 2, blockHeight / 2,
-                writeOffset + (imageWidth / 8 * (blockHeight / 4) * texelSize),
+            DeswizzlePS4Block(swizzled, unswizzled, ref readOffset, imageWidth, texelSize, blockWidth / 2,
+                blockHeight / 2,
+                writeOffset + imageWidth / 8 * (blockHeight / 4) * texelSize,
                 offsetFactor * 2);
-            DeswizzlePS4Block(swizzled, unswizzled, ref readOffset, imageWidth, texelSize, blockWidth / 2, blockHeight / 2,
+            DeswizzlePS4Block(swizzled, unswizzled, ref readOffset, imageWidth, texelSize, blockWidth / 2,
+                blockHeight / 2,
                 writeOffset + imageWidth / 8 * (blockHeight / 4) * texelSize + blockWidth / 8 * texelSize,
                 offsetFactor * 2);
         }
@@ -374,7 +386,7 @@ internal static class Headerizer
 
     private class Image
     {
-        public List<byte[]> MipLevels;
+        public readonly List<byte[]> MipLevels;
 
         public Image()
         {
@@ -385,49 +397,55 @@ internal static class Headerizer
         {
             var bw = new BinaryWriterEx(false);
             foreach (Image image in images)
-            foreach (byte[] mip in image.MipLevels)
+            foreach (var mip in image.MipLevels)
                 bw.WriteBytes(mip);
             return bw.FinishBytes();
         }
 
-        public static List<Image> ReadUncompressed(byte[] bytes, int width, int height, int padDimensions, int imageCount, int mipCount, int padBetween, int bytesPerPixel)
+        public static List<Image> ReadUncompressed(byte[] bytes, int width, int height, int padDimensions,
+            int imageCount, int mipCount, int padBetween, int bytesPerPixel)
         {
             var images = new List<Image>(imageCount);
             var br = new BinaryReaderEx(false, bytes);
-            for (int i = 0; i < imageCount; i++)
+            for (var i = 0; i < imageCount; i++)
             {
                 var image = new Image();
                 br.Pad(padBetween);
-                for (int j = 0; j < mipCount; j++)
+                for (var j = 0; j < mipCount; j++)
                 {
-                    int scale = (int)Math.Pow(2, j);
-                    int w = PadTo(width / scale, padDimensions);
-                    int h = PadTo(height / scale, padDimensions);
+                    var scale = (int)Math.Pow(2, j);
+                    var w = PadTo(width / scale, padDimensions);
+                    var h = PadTo(height / scale, padDimensions);
                     image.MipLevels.Add(br.ReadBytes(w * h * bytesPerPixel));
                 }
+
                 images.Add(image);
             }
+
             return images;
         }
 
-        public static List<Image> ReadCompressed(byte[] bytes, int width, int height, int padDimensions, int imageCount, int mipCount, int padBetween, int bytesPerBlock)
+        public static List<Image> ReadCompressed(byte[] bytes, int width, int height, int padDimensions, int imageCount,
+            int mipCount, int padBetween, int bytesPerBlock)
         {
             var images = new List<Image>(imageCount);
             var br = new BinaryReaderEx(false, bytes);
-            for (int i = 0; i < imageCount; i++)
+            for (var i = 0; i < imageCount; i++)
             {
                 var image = new Image();
                 br.Pad(padBetween);
-                for (int j = 0; j < mipCount; j++)
+                for (var j = 0; j < mipCount; j++)
                 {
-                    int scale = (int)Math.Pow(2, j);
-                    int w = PadTo(width / scale, padDimensions);
-                    int h = PadTo(height / scale, padDimensions);
-                    int blocks = (int)Math.Max(1, w / 4f) * (int)Math.Max(1, h / 4f);
+                    var scale = (int)Math.Pow(2, j);
+                    var w = PadTo(width / scale, padDimensions);
+                    var h = PadTo(height / scale, padDimensions);
+                    var blocks = (int)Math.Max(1, w / 4f) * (int)Math.Max(1, h / 4f);
                     image.MipLevels.Add(br.ReadBytes(blocks * bytesPerBlock));
                 }
+
                 images.Add(image);
             }
+
             return images;
         }
     }
